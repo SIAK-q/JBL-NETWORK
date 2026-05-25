@@ -88,6 +88,50 @@ svg { width: 100%; height: 100%; }
 .node.dim circle { opacity: 0.12; }
 .node.dim text { opacity: 0.08; }
 .sales-badge { font-size: 0.58rem; padding: 1px 5px; border-radius: 3px; background: #fdf8f2; color: var(--accent); border: 1px solid #f0debb; margin-top: 3px; display: inline-block; }
+/* 模式切换 */
+.mode-btns { display: flex; gap: 4px; }
+.mode-btn { padding: 3px 10px; border-radius: 20px; font-size: 0.68rem; border: 1px solid var(--border); background: transparent; color: var(--muted); cursor: pointer; font-family: "Noto Sans JP", sans-serif; transition: all 0.15s; }
+.mode-btn.on { background: var(--text); color: #fff; border-color: var(--text); }
+.graph { flex: 1; position: relative; }
+.graph.hidden { display: none; }
+/* 列表模式右侧面板 */
+.list-panel { flex: 1; overflow-y: auto; background: var(--bg); display: none; }
+.list-panel.show { display: flex; }
+.dashboard { width: 300px; flex-shrink: 0; padding: 1.25rem; border-right: 1px solid var(--border); background: var(--surface); overflow-y: auto; }
+.dashboard::-webkit-scrollbar { width: 3px; }
+.dashboard::-webkit-scrollbar-thumb { background: var(--border); }
+.dash-title { font-family: "Noto Serif JP", serif; font-size: 0.85rem; font-weight: 600; color: var(--text); margin-bottom: 1rem; }
+.dash-section { margin-bottom: 1.25rem; }
+.dash-sec-title { font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); margin-bottom: 0.6rem; }
+.stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.stat-card { background: var(--bg); border-radius: 8px; padding: 0.75rem; text-align: center; }
+.stat-card .num { font-family: "Noto Serif JP", serif; font-size: 1.4rem; font-weight: 600; color: var(--text); }
+.stat-card .lbl { font-size: 0.6rem; color: var(--muted); margin-top: 2px; }
+.rank-item { display: flex; align-items: center; gap: 8px; padding: 5px 0; border-bottom: 1px solid var(--border); font-size: 0.76rem; }
+.rank-item:last-child { border-bottom: none; }
+.rank-num { font-size: 0.65rem; color: var(--muted); width: 16px; flex-shrink: 0; }
+.rank-name { flex: 1; color: var(--text); line-height: 1.3; }
+.rank-val { font-size: 0.68rem; color: var(--accent); font-weight: 500; white-space: nowrap; }
+.agency-bar { margin-bottom: 6px; }
+.agency-bar-label { display: flex; justify-content: space-between; font-size: 0.68rem; margin-bottom: 3px; }
+.agency-bar-track { height: 4px; background: var(--border); border-radius: 2px; }
+.agency-bar-fill { height: 4px; border-radius: 2px; transition: width 0.6s ease; }
+/* 列表模式演员详情 */
+.list-detail { flex: 1; overflow-y: auto; }
+.list-detail.empty { display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: 0.8rem; }
+.list-detail-inner { padding: 1.5rem; }
+.ld-name { font-family: "Noto Serif JP", serif; font-size: 1.4rem; font-weight: 600; margin-bottom: 6px; }
+.ld-tags { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 1.25rem; }
+.ld-tag { font-size: 0.68rem; padding: 3px 10px; border-radius: 4px; font-weight: 500; }
+.ld-sec { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); margin: 1rem 0 0.5rem; }
+.ld-wcard { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 0.75rem 1rem; margin-bottom: 8px; border-left: 4px solid transparent; }
+.ld-wtitle { font-size: 0.85rem; color: var(--text); margin-bottom: 4px; }
+.ld-wmeta { display: flex; gap: 8px; align-items: center; }
+.ld-wdate { font-size: 0.68rem; color: var(--muted); }
+.ld-wrtag { font-size: 0.63rem; padding: 1px 6px; border-radius: 3px; }
+.ld-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.ld-chip { font-size: 0.73rem; padding: 4px 12px; border-radius: 16px; border: 1px solid var(--border); color: var(--muted); cursor: pointer; background: var(--surface); transition: all 0.15s; }
+.ld-chip:hover { border-color: var(--accent); color: var(--text); }
 /* 新增演员表单 */
 .add-section { border-top: 1px solid var(--border); flex-shrink: 0; }
 .add-toggle { width: 100%; padding: 8px 0.9rem; font-size: 0.75rem; color: var(--muted); background: none; border: none; cursor: pointer; text-align: left; font-family: 'Noto Sans JP', sans-serif; display: flex; align-items: center; gap: 6px; transition: background 0.12s; }
@@ -125,22 +169,33 @@ svg { width: 100%; height: 100%; }
     <p>数据来源：社区整理 · 统计至 2026/3 · 气泡=事务所 · 连线=共演BL</p>
   </div>
   <div class="controls">
-    <div class="legend">
+    <div class="legend" id="legend">
       <div class="legend-item"><div class="legend-dot" style="background:#D94F6B"></div>攻</div>
       <div class="legend-item"><div class="legend-dot" style="background:#4A7FC1"></div>受</div>
       <div class="legend-item"><div class="legend-dot" style="background:#7C5CBF"></div>两栖</div>
     </div>
-    <div class="filters">
+    <div class="filters" id="filters">
       <button class="fbtn on" onclick="setFilter('全部',this)">全部</button>
       <button class="fbtn" onclick="setFilter('攻',this)">攻</button>
       <button class="fbtn" onclick="setFilter('受',this)">受</button>
       <button class="fbtn" onclick="setFilter('两栖',this)">两栖</button>
+    </div>
+    <div class="mode-btns">
+      <button class="mode-btn" id="mode-list" onclick="setMode('list')">📋 列表</button>
+      <button class="mode-btn on" id="mode-graph" onclick="setMode('graph')">🕸 图谱</button>
     </div>
     <button class="publish-btn loading" id="publish-btn" onclick="publishToGitHub()">发布中...</button>
   </div>
 </header>
 
 <div class="main">
+  <!-- 列表模式面板 -->
+  <div class="list-panel" id="list-panel">
+    <div class="dashboard" id="dashboard"></div>
+    <div class="list-detail empty" id="list-detail">
+      <span>← 从左侧选择一位演员</span>
+    </div>
+  </div>
   <div class="sidebar">
     <input id="search" type="text" placeholder="搜索演员..." oninput="renderList(this.value)">
     <div class="alist" id="alist"></div>
@@ -429,6 +484,146 @@ function renderList(q='') {
 }
 
 window.addEventListener('resize',()=>{ if(simulation) simulation.restart(); });
+
+// ========== 模式切换 ==========
+let curMode = 'graph';
+
+function setMode(mode) {
+  curMode = mode;
+  const graphEl = document.querySelector('.graph');
+  const listPanel = document.getElementById('list-panel');
+  const legend = document.getElementById('legend');
+  const filters = document.getElementById('filters');
+  document.getElementById('mode-list').classList.toggle('on', mode==='list');
+  document.getElementById('mode-graph').classList.toggle('on', mode==='graph');
+  if(mode === 'graph') {
+    graphEl.classList.remove('hidden');
+    listPanel.classList.remove('show');
+    legend.style.display = '';
+    filters.style.display = '';
+    setTimeout(()=>{ if(simulation) simulation.restart(); }, 50);
+  } else {
+    graphEl.classList.add('hidden');
+    listPanel.classList.add('show');
+    legend.style.display = 'none';
+    filters.style.display = 'none';
+    renderDashboard();
+  }
+}
+
+// ========== Dashboard ==========
+function renderDashboard() {
+  const dash = document.getElementById('dashboard');
+  if(!ACTORS.length) return;
+
+  // 统计数据
+  const totalActors = ACTORS.length;
+  const totalDramas = Object.keys(allDramas).length;
+  const agencies = Object.keys(agencyMap).length;
+  const totalCostar = Object.values(costarMap).reduce((s,v)=>s+v.size, 0) / 2;
+
+  // 销量 Top5
+  const salesTop = Object.entries(SALES).sort((a,b)=>b[1]-a[1]).slice(0,5);
+
+  // 共演最多的演员
+  const costarTop = ACTORS.map(a=>({ name:a.name, count:[...(costarMap[a.name]||[])].length }))
+    .sort((a,b)=>b.count-a.count).slice(0,5);
+
+  // 事务所分布
+  const agencyStats = Object.entries(agencyMap)
+    .map(([name, members])=>({ name, count: members.length }))
+    .sort((a,b)=>b.count-a.count);
+  const maxAgency = agencyStats[0]?.count || 1;
+
+  dash.innerHTML = `
+    <div class="dash-title">图鉴概览</div>
+    <div class="dash-section">
+      <div class="stat-grid">
+        <div class="stat-card"><div class="num">${totalActors}</div><div class="lbl">演员总数</div></div>
+        <div class="stat-card"><div class="num">${totalDramas}</div><div class="lbl">作品总数</div></div>
+        <div class="stat-card"><div class="num">${agencies}</div><div class="lbl">事务所数</div></div>
+        <div class="stat-card"><div class="num">${Math.round(totalCostar)}</div><div class="lbl">共演对数</div></div>
+      </div>
+    </div>
+    ${salesTop.length ? `
+    <div class="dash-section">
+      <div class="dash-sec-title">🏆 2025 销量榜</div>
+      ${salesTop.map(([title,val],i)=>`
+        <div class="rank-item">
+          <div class="rank-num">${i+1}</div>
+          <div class="rank-name">${title.length>12?title.slice(0,12)+'…':title}</div>
+          <div class="rank-val">${val.toLocaleString()} 本</div>
+        </div>`).join('')}
+    </div>` : ''}
+    <div class="dash-section">
+      <div class="dash-sec-title">🔗 共演最多</div>
+      ${costarTop.map((a,i)=>`
+        <div class="rank-item" style="cursor:pointer" onclick="listSelectActor('${a.name}')">
+          <div class="rank-num">${i+1}</div>
+          <div class="rank-name">${a.name}</div>
+          <div class="rank-val">${a.count} 人</div>
+        </div>`).join('')}
+    </div>
+    <div class="dash-section">
+      <div class="dash-sec-title">🏢 事务所分布</div>
+      ${agencyStats.map(a=>`
+        <div class="agency-bar">
+          <div class="agency-bar-label">
+            <span style="font-size:0.68rem;color:var(--text)">${a.name}</span>
+            <span style="font-size:0.65rem;color:var(--muted)">${a.count} 人</span>
+          </div>
+          <div class="agency-bar-track">
+            <div class="agency-bar-fill" style="width:${Math.round(a.count/maxAgency*100)}%;background:${AGENCY_COLORS[a.name]||'#C9A96E'}"></div>
+          </div>
+        </div>`).join('')}
+    </div>
+  `;
+}
+
+// 列表模式点击演员显示详情
+function listSelectActor(name) {
+  const actor = ACTORS.find(a=>a.name===name);
+  if(!actor) return;
+  const role = getRole(actor);
+  const costars = [...(costarMap[name]||[])];
+  const detail = document.getElementById('list-detail');
+  detail.classList.remove('empty');
+
+  // 同步侧边栏高亮
+  document.querySelectorAll('.aitem').forEach(el=>el.classList.toggle('on', el.dataset.name===name));
+
+  const ac = actor.agency ? AGENCY_COLORS[actor.agency]||'#aaa' : '';
+  detail.innerHTML = `<div class="list-detail-inner">
+    <div class="ld-name">${name}</div>
+    <div class="ld-tags">
+      <span class="ld-tag" style="background:${RB[role]};color:${RC[role]}">${role==='两栖'?'攻受两栖':role}</span>
+      ${actor.agency?`<span class="ld-tag" style="background:${ac}22;color:${ac}">${actor.agency}${actor.sub?' · '+actor.sub:''}</span>`:''}
+    </div>
+    <div class="ld-sec">出演作品</div>
+    ${actor.works.map(w=>{
+      const c=RC[w.role]||'#9CA3AF', sales=SALES[w.title];
+      return `<div class="ld-wcard" style="border-left-color:${c}">
+        <div class="ld-wtitle">${w.title}</div>
+        <div class="ld-wmeta">
+          <span class="ld-wdate">${w.date}</span>
+          <span class="ld-wrtag" style="background:${RB[w.role]||'#f3f4f6'};color:${c}">${w.role}</span>
+          ${sales?`<span class="sales-badge">📦 ${sales.toLocaleString()} 本</span>`:''}
+        </div>
+      </div>`;
+    }).join('')}
+    <div class="ld-sec">共演过 (${costars.length}人)</div>
+    <div class="ld-chips">
+      ${costars.length
+        ? costars.map(c=>`<span class="ld-chip" onclick="listSelectActor('${c}')">${c}</span>`).join('')
+        : '<span style="font-size:0.75rem;color:var(--muted)">暂无共演记录</span>'}
+    </div>
+    ${actor.agency && (agencyMap[actor.agency]||[]).filter(n=>n!==name).length ? `
+    <div class="ld-sec">同事务所</div>
+    <div class="ld-chips">
+      ${(agencyMap[actor.agency]||[]).filter(n=>n!==name).map(c=>`<span class="ld-chip" style="border-color:${ac}66" onclick="listSelectActor('${c}')">${c}</span>`).join('')}
+    </div>` : ''}
+  </div>`;
+}
 
 // ========== 新增演员表单逻辑 ==========
 let selectedRole = '';
