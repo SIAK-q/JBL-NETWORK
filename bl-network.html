@@ -1,11 +1,9 @@
-<!DOCTYPE html>
-<html lang="zh">
-<head>
+<html lang="zh"><head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>日腐人二下 · 演员关系图鉴</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
-<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@300;400;600&family=Noto+Sans+JP:wght@300;400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@300;400;600&amp;family=Noto+Sans+JP:wght@300;400;500&amp;display=swap" rel="stylesheet">
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 :root {
@@ -90,13 +88,35 @@ svg { width: 100%; height: 100%; }
 .node.dim circle { opacity: 0.12; }
 .node.dim text { opacity: 0.08; }
 .sales-badge { font-size: 0.58rem; padding: 1px 5px; border-radius: 3px; background: #fdf8f2; color: var(--accent); border: 1px solid #f0debb; margin-top: 3px; display: inline-block; }
+/* 新增演员表单 */
+.add-section { border-top: 1px solid var(--border); flex-shrink: 0; }
+.add-toggle { width: 100%; padding: 8px 0.9rem; font-size: 0.75rem; color: var(--muted); background: none; border: none; cursor: pointer; text-align: left; font-family: 'Noto Sans JP', sans-serif; display: flex; align-items: center; gap: 6px; transition: background 0.12s; }
+.add-toggle:hover { background: var(--bg); color: var(--text); }
+.add-toggle .arrow { transition: transform 0.2s; font-size: 10px; }
+.add-toggle.open .arrow { transform: rotate(180deg); }
+.add-form { display: none; padding: 0 0.9rem 0.9rem; }
+.add-form.show { display: block; }
+.form-row { margin-bottom: 7px; }
+.form-label { font-size: 0.62rem; color: var(--muted); margin-bottom: 3px; display: flex; align-items: center; gap: 4px; }
+.form-label .opt { font-size: 0.55rem; color: #ccc; }
+.form-input { width: 100%; padding: 5px 8px; border: 1px solid var(--border); border-radius: 5px; font-size: 0.73rem; font-family: 'Noto Sans JP', sans-serif; background: var(--bg); color: var(--text); outline: none; }
+.form-input:focus { border-color: var(--accent); }
+.role-btns { display: flex; gap: 5px; }
+.role-btn { flex: 1; padding: 4px; border-radius: 5px; border: 1px solid var(--border); background: none; font-size: 0.7rem; cursor: pointer; font-family: 'Noto Sans JP', sans-serif; color: var(--muted); transition: all 0.15s; }
+.role-btn.active-攻 { background: #fdf0f3; color: #D94F6B; border-color: #D94F6B; }
+.role-btn.active-受 { background: #edf3fb; color: #4A7FC1; border-color: #4A7FC1; }
+.role-btn.active-? { background: var(--gray-soft); color: var(--gray); border-color: var(--gray); }
+.save-btn { width: 100%; padding: 6px; border-radius: 5px; border: none; background: var(--accent); color: #fff; font-size: 0.73rem; cursor: pointer; font-family: 'Noto Sans JP', sans-serif; margin-top: 8px; transition: opacity 0.15s; }
+.save-btn:hover { opacity: 0.85; }
+.save-btn:disabled { opacity: 0.5; pointer-events: none; }
+.form-msg { font-size: 0.65rem; margin-top: 5px; text-align: center; min-height: 14px; }
 </style>
 </head>
 <body>
 
-<div class="loading-screen" id="loading">
+<div class="loading-screen hidden" id="loading">
   <div class="loading-spinner"></div>
-  <div class="loading-text">加载数据中...</div>
+  <div class="loading-text">⚠️ 请通过 GitHub Pages 访问以加载数据</div>
 </div>
 
 <header>
@@ -116,7 +136,7 @@ svg { width: 100%; height: 100%; }
       <button class="fbtn" onclick="setFilter('受',this)">受</button>
       <button class="fbtn" onclick="setFilter('两栖',this)">两栖</button>
     </div>
-    <button class="publish-btn" id="publish-btn" onclick="publishToGitHub()">↑ 发布到 GitHub</button>
+    <button class="publish-btn loading" id="publish-btn" onclick="publishToGitHub()">发布中...</button>
   </div>
 </header>
 
@@ -124,9 +144,46 @@ svg { width: 100%; height: 100%; }
   <div class="sidebar">
     <input id="search" type="text" placeholder="搜索演员..." oninput="renderList(this.value)">
     <div class="alist" id="alist"></div>
+    <div class="add-section">
+      <button class="add-toggle" id="add-toggle" onclick="toggleAddForm()">
+        <span>＋ 新增演员</span><span class="arrow">▼</span>
+      </button>
+      <div class="add-form" id="add-form">
+        <div class="form-row">
+          <div class="form-label">演员名 <span style="color:#E24B4A">*</span></div>
+          <input class="form-input" id="f-name" placeholder="例：田中洸希">
+        </div>
+        <div class="form-row">
+          <div class="form-label">事务所 <span class="opt">选填</span></div>
+          <input class="form-input" id="f-agency" placeholder="例：ebidan">
+        </div>
+        <div class="form-row">
+          <div class="form-label">子团体 <span class="opt">选填</span></div>
+          <input class="form-input" id="f-sub" placeholder="例：superdragon">
+        </div>
+        <div class="form-row">
+          <div class="form-label">作品名 <span style="color:#E24B4A">*</span></div>
+          <input class="form-input" id="f-title" placeholder="例：甜蜜喂食生活">
+        </div>
+        <div class="form-row">
+          <div class="form-label">上映日期 <span class="opt">选填</span></div>
+          <input class="form-input" id="f-date" placeholder="例：2024/8/4">
+        </div>
+        <div class="form-row">
+          <div class="form-label">角色 <span style="color:#E24B4A">*</span></div>
+          <div class="role-btns">
+            <button class="role-btn" id="rb-攻" onclick="selectRole('攻')">攻</button>
+            <button class="role-btn" id="rb-受" onclick="selectRole('受')">受</button>
+            <button class="role-btn" id="rb-?" onclick="selectRole('?')">?</button>
+          </div>
+        </div>
+        <button class="save-btn" id="save-btn" onclick="saveActor()">保存并同步到 GitHub</button>
+        <div class="form-msg" id="form-msg"></div>
+      </div>
+    </div>
   </div>
   <div class="graph">
-    <svg id="svg"></svg>
+    <svg id="svg"><g><g></g><g></g><g></g></g></svg>
     <div class="hint">滚轮缩放 · 拖拽节点 · 点击查看详情</div>
   </div>
   <div class="detail" id="detail">
@@ -373,6 +430,108 @@ function renderList(q='') {
 
 window.addEventListener('resize',()=>{ if(simulation) simulation.restart(); });
 
+// ========== 新增演员表单逻辑 ==========
+let selectedRole = '';
+
+function toggleAddForm() {
+  const form = document.getElementById('add-form');
+  const toggle = document.getElementById('add-toggle');
+  form.classList.toggle('show');
+  toggle.classList.toggle('open');
+}
+
+function selectRole(role) {
+  selectedRole = role;
+  ['攻','受','?'].forEach(r => {
+    const btn = document.getElementById('rb-' + r);
+    btn.className = 'role-btn' + (r === role ? ' active-' + r : '');
+  });
+}
+
+async function saveActor() {
+  const name = document.getElementById('f-name').value.trim();
+  const agency = document.getElementById('f-agency').value.trim();
+  const sub = document.getElementById('f-sub').value.trim();
+  const title = document.getElementById('f-title').value.trim();
+  const date = document.getElementById('f-date').value.trim() || new Date().getFullYear().toString();
+  const msg = document.getElementById('form-msg');
+  const btn = document.getElementById('save-btn');
+
+  if(!name) { msg.style.color='#E24B4A'; msg.textContent='请填写演员名'; return; }
+  if(!title) { msg.style.color='#E24B4A'; msg.textContent='请填写作品名'; return; }
+  if(!selectedRole) { msg.style.color='#E24B4A'; msg.textContent='请选择角色'; return; }
+
+  let token = getToken();
+  if(!token) { token = promptToken(); if(!token) return; }
+
+  btn.disabled = true;
+  msg.style.color = 'var(--muted)';
+  msg.textContent = '同步中...';
+
+  // 新作品对象
+  const newWork = { title, date, role: selectedRole };
+
+  // 检查演员是否已存在
+  const existingIdx = ACTORS.findIndex(a => a.name === name);
+  if(existingIdx >= 0) {
+    // 已有演员，追加作品
+    ACTORS[existingIdx].works.push(newWork);
+  } else {
+    // 新演员
+    const newActor = { name, agency, works: [newWork] };
+    if(sub) newActor.sub = sub;
+    ACTORS.push(newActor);
+  }
+
+  // 立即刷新图谱
+  buildMaps();
+  init();
+
+  // 同步到 GitHub actors.json
+  try {
+    const dataToSave = { actors: ACTORS, sales: SALES };
+    const jsonStr = JSON.stringify(dataToSave, null, 2);
+
+    // 获取当前 actors.json 的 SHA
+    const getRes = await fetch(
+      `https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/contents/actors.json`,
+      { headers: { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github.v3+json' } }
+    );
+    if(getRes.status === 401) { localStorage.removeItem('gh_token_bl'); throw new Error('Token 无效'); }
+    const { sha } = await getRes.json();
+
+    // 推送更新后的 actors.json
+    const putRes = await fetch(
+      `https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/contents/actors.json`,
+      { method: 'PUT',
+        headers: { 'Authorization': `token ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: `add actor: ${name} - ${title}`,
+          content: btoa(unescape(encodeURIComponent(jsonStr))),
+          sha, branch: GITHUB_CONFIG.branch
+        })
+      }
+    );
+
+    if(putRes.ok) {
+      msg.style.color = '#4CAF50';
+      msg.textContent = '✓ 保存成功！';
+      // 清空表单
+      ['f-name','f-agency','f-sub','f-title','f-date'].forEach(id => document.getElementById(id).value = '');
+      selectedRole = '';
+      ['攻','受','?'].forEach(r => document.getElementById('rb-'+r).className = 'role-btn');
+      setTimeout(()=>{ msg.textContent=''; }, 3000);
+    } else {
+      throw new Error('同步失败');
+    }
+  } catch(e) {
+    // 即使同步失败，本地已经更新了
+    msg.style.color = '#E24B4A';
+    msg.textContent = '本地已更新，但 GitHub 同步失败：' + e.message;
+  }
+  btn.disabled = false;
+}
+
 // 启动：先加载数据再渲染
 (async () => {
   const ok = await loadData();
@@ -380,5 +539,6 @@ window.addEventListener('resize',()=>{ if(simulation) simulation.restart(); });
   document.getElementById('loading').classList.add('hidden');
 })();
 </script>
-</body>
-</html>
+
+
+</body></html>
