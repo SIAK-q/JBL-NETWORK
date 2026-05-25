@@ -1,701 +1,684 @@
-<!DOCTYPE html>
-<html lang="zh">
-<head>
+<html lang="zh"><head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>日腐人二下 · 演员关系图鉴</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
-<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@300;400;600&family=Noto+Sans+JP:wght@300;400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@300;400;600&amp;family=Noto+Sans+JP:wght@300;400;500&amp;display=swap" rel="stylesheet">
 <style>
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-
-  :root {
-    --red: #E8455A;
-    --red-light: #fde8eb;
-    --blue: #3B82C4;
-    --blue-light: #e8f0fb;
-    --purple: #8B5CF6;
-    --purple-light: #f0ebff;
-    --gray: #6B7280;
-    --bg: #FAFAF8;
-    --surface: #FFFFFF;
-    --border: #E8E4DF;
-    --text: #1a1a1a;
-    --text-muted: #888;
-    --link: #D4A5A5;
-  }
-
-  body {
-    font-family: 'Noto Sans JP', sans-serif;
-    background: var(--bg);
-    color: var(--text);
-    min-height: 100vh;
-    overflow-x: hidden;
-  }
-
-  /* Header */
-  header {
-    padding: 2rem 2.5rem 1.5rem;
-    border-bottom: 1px solid var(--border);
-    background: var(--surface);
-    display: flex;
-    align-items: flex-end;
-    justify-content: space-between;
-    gap: 1rem;
-    flex-wrap: wrap;
-  }
-
-  .header-left h1 {
-    font-family: 'Noto Serif JP', serif;
-    font-size: 1.6rem;
-    font-weight: 600;
-    letter-spacing: 0.05em;
-    color: var(--text);
-    line-height: 1.2;
-  }
-
-  .header-left p {
-    font-size: 0.78rem;
-    color: var(--text-muted);
-    margin-top: 0.3rem;
-    font-weight: 300;
-    letter-spacing: 0.03em;
-  }
-
-  .legend {
-    display: flex;
-    gap: 1.2rem;
-    align-items: center;
-    flex-wrap: wrap;
-  }
-
-  .legend-item {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 0.75rem;
-    color: var(--text-muted);
-  }
-
-  .legend-dot {
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    flex-shrink: 0;
-  }
-
-  /* Layout */
-  .layout {
-    display: flex;
-    height: calc(100vh - 85px);
-  }
-
-  /* Sidebar */
-  .sidebar {
-    width: 280px;
-    flex-shrink: 0;
-    border-right: 1px solid var(--border);
-    background: var(--surface);
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-  }
-
-  .sidebar-search {
-    padding: 1rem;
-    border-bottom: 1px solid var(--border);
-  }
-
-  .sidebar-search input {
-    width: 100%;
-    padding: 0.5rem 0.75rem;
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    font-size: 0.8rem;
-    font-family: 'Noto Sans JP', sans-serif;
-    background: var(--bg);
-    color: var(--text);
-    outline: none;
-    transition: border-color 0.2s;
-  }
-
-  .sidebar-search input:focus {
-    border-color: var(--link);
-  }
-
-  .actor-list {
-    flex: 1;
-    overflow-y: auto;
-    padding: 0.5rem 0;
-  }
-
-  .actor-list::-webkit-scrollbar { width: 4px; }
-  .actor-list::-webkit-scrollbar-track { background: transparent; }
-  .actor-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
-
-  .actor-item {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 0.6rem 1rem;
-    cursor: pointer;
-    transition: background 0.15s;
-    border-radius: 0;
-  }
-
-  .actor-item:hover { background: var(--bg); }
-  .actor-item.active { background: #fdf5f5; }
-
-  .actor-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    flex-shrink: 0;
-  }
-
-  .actor-name {
-    font-size: 0.82rem;
-    font-weight: 400;
-    color: var(--text);
-    flex: 1;
-  }
-
-  .actor-tag {
-    font-size: 0.68rem;
-    padding: 1px 6px;
-    border-radius: 3px;
-    font-weight: 500;
-  }
-
-  .tag-攻 { background: var(--red-light); color: var(--red); }
-  .tag-受 { background: var(--blue-light); color: var(--blue); }
-  .tag-两栖 { background: var(--purple-light); color: var(--purple); }
-  .tag-未知 { background: #f3f4f6; color: var(--gray); }
-
-  /* Graph area */
-  .graph-area {
-    flex: 1;
-    position: relative;
-    overflow: hidden;
-  }
-
-  #graph-svg {
-    width: 100%;
-    height: 100%;
-  }
-
-  /* Info panel */
-  .info-panel {
-    position: absolute;
-    top: 1.5rem;
-    right: 1.5rem;
-    width: 260px;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 1.25rem;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.06);
-    opacity: 0;
-    transform: translateY(8px);
-    transition: all 0.25s ease;
-    pointer-events: none;
-  }
-
-  .info-panel.visible {
-    opacity: 1;
-    transform: translateY(0);
-    pointer-events: auto;
-  }
-
-  .info-panel-name {
-    font-family: 'Noto Serif JP', serif;
-    font-size: 1.1rem;
-    font-weight: 600;
-    margin-bottom: 0.25rem;
-    color: var(--text);
-  }
-
-  .info-panel-role {
-    font-size: 0.72rem;
-    margin-bottom: 1rem;
-    font-weight: 500;
-  }
-
-  .info-section-title {
-    font-size: 0.68rem;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    color: var(--text-muted);
-    margin-bottom: 0.5rem;
-    margin-top: 0.75rem;
-  }
-
-  .work-item {
-    display: flex;
-    align-items: flex-start;
-    gap: 8px;
-    padding: 0.4rem 0;
-    border-bottom: 1px solid var(--border);
-    font-size: 0.76rem;
-  }
-
-  .work-item:last-child { border-bottom: none; }
-
-  .work-role-dot {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    margin-top: 5px;
-    flex-shrink: 0;
-  }
-
-  .work-title {
-    flex: 1;
-    color: var(--text);
-    line-height: 1.4;
-  }
-
-  .work-date {
-    color: var(--text-muted);
-    font-size: 0.68rem;
-    white-space: nowrap;
-  }
-
-  .costar-list {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 5px;
-    margin-top: 0.25rem;
-  }
-
-  .costar-chip {
-    font-size: 0.7rem;
-    padding: 2px 8px;
-    border-radius: 12px;
-    border: 1px solid var(--border);
-    color: var(--text-muted);
-    cursor: pointer;
-    transition: all 0.15s;
-    background: var(--bg);
-  }
-
-  .costar-chip:hover {
-    border-color: var(--link);
-    color: var(--text);
-  }
-
-  .close-btn {
-    position: absolute;
-    top: 0.75rem;
-    right: 0.75rem;
-    width: 20px;
-    height: 20px;
-    border: none;
-    background: none;
-    cursor: pointer;
-    color: var(--text-muted);
-    font-size: 14px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 4px;
-    transition: background 0.15s;
-  }
-
-  .close-btn:hover { background: var(--bg); }
-
-  /* Hint */
-  .hint {
-    position: absolute;
-    bottom: 1.5rem;
-    left: 50%;
-    transform: translateX(-50%);
-    font-size: 0.72rem;
-    color: var(--text-muted);
-    background: rgba(255,255,255,0.9);
-    padding: 0.4rem 1rem;
-    border-radius: 20px;
-    border: 1px solid var(--border);
-    pointer-events: none;
-    white-space: nowrap;
-  }
-
-  /* D3 styles */
-  .node circle {
-    stroke-width: 2;
-    cursor: pointer;
-    transition: r 0.2s;
-  }
-
-  .node text {
-    font-family: 'Noto Sans JP', sans-serif;
-    font-size: 11px;
-    pointer-events: none;
-    fill: #333;
-  }
-
-  .link {
-    stroke: #ddd;
-    stroke-width: 1.5;
-    fill: none;
-  }
-
-  .link.highlighted {
-    stroke: #D4A5A5;
-    stroke-width: 2.5;
-  }
-
-  .link-label {
-    font-family: 'Noto Sans JP', sans-serif;
-    font-size: 9px;
-    fill: #aaa;
-    pointer-events: none;
-  }
-
-  .node.dimmed circle { opacity: 0.2; }
-  .node.dimmed text { opacity: 0.2; }
-  .link.dimmed { opacity: 0.05; }
+* { margin: 0; padding: 0; box-sizing: border-box; }
+:root {
+  --red: #D94F6B; --red-soft: #fdf0f3;
+  --blue: #4A7FC1; --blue-soft: #edf3fb;
+  --purple: #7C5CBF; --purple-soft: #f2eefb;
+  --gray: #9CA3AF; --gray-soft: #f3f4f6;
+  --bg: #FDFCFA; --surface: #fff;
+  --border: #EDE9E3; --text: #1C1917;
+  --muted: #9B8E83; --accent: #C9A96E;
+}
+body { font-family: 'Noto Sans JP', sans-serif; background: var(--bg); color: var(--text); height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
+header { padding: 0.9rem 1.5rem; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-shrink: 0; flex-wrap: wrap; }
+.brand h1 { font-family: 'Noto Serif JP', serif; font-size: 1.05rem; font-weight: 600; letter-spacing: 0.08em; }
+.brand p { font-size: 0.68rem; color: var(--muted); margin-top: 2px; }
+.controls { display: flex; gap: 1rem; align-items: center; flex-wrap: wrap; }
+.legend { display: flex; gap: 0.8rem; align-items: center; }
+.legend-item { display: flex; align-items: center; gap: 4px; font-size: 0.7rem; color: var(--muted); }
+.legend-dot { width: 8px; height: 8px; border-radius: 50%; }
+.filters { display: flex; gap: 4px; }
+.fbtn { padding: 3px 10px; border-radius: 20px; font-size: 0.68rem; border: 1px solid var(--border); background: transparent; color: var(--muted); cursor: pointer; font-family: 'Noto Sans JP', sans-serif; transition: all 0.15s; }
+.fbtn:hover { background: var(--bg); }
+.fbtn.on { background: var(--text); color: #fff; border-color: var(--text); }
+.publish-btn { padding: 4px 12px; border-radius: 6px; font-size: 0.7rem; border: 1px solid var(--accent); background: transparent; color: var(--accent); cursor: pointer; font-family: 'Noto Sans JP', sans-serif; transition: all 0.15s; display: flex; align-items: center; gap: 5px; }
+.publish-btn:hover { background: #fdf8f2; }
+.publish-btn.loading { opacity: 0.6; pointer-events: none; }
+.publish-btn.success { border-color: #4CAF50; color: #4CAF50; }
+.publish-btn.error { border-color: #E24B4A; color: #E24B4A; }
+.main { flex: 1; display: flex; overflow: hidden; }
+.sidebar { width: 220px; flex-shrink: 0; background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; }
+.sidebar input { margin: 0.7rem; padding: 5px 10px; border: 1px solid var(--border); border-radius: 6px; font-size: 0.76rem; font-family: 'Noto Sans JP', sans-serif; background: var(--bg); color: var(--text); outline: none; }
+.sidebar input:focus { border-color: var(--accent); }
+.alist { flex: 1; overflow-y: auto; padding: 4px 0; }
+.alist::-webkit-scrollbar { width: 3px; }
+.alist::-webkit-scrollbar-thumb { background: var(--border); }
+.aitem { display: flex; align-items: center; gap: 7px; padding: 6px 0.9rem; cursor: pointer; transition: background 0.12s; border-left: 2px solid transparent; font-size: 0.78rem; }
+.aitem:hover { background: var(--bg); }
+.aitem.on { background: #fdf8f2; border-left-color: var(--accent); }
+.adot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.aname { flex: 1; color: var(--text); line-height: 1.3; }
+.abadge { font-size: 0.6rem; padding: 1px 5px; border-radius: 3px; font-weight: 500; flex-shrink: 0; }
+.graph { flex: 1; position: relative; }
+svg { width: 100%; height: 100%; }
+.hint { position: absolute; bottom: 1rem; left: 50%; transform: translateX(-50%); font-size: 0.66rem; color: var(--muted); background: rgba(255,255,255,0.9); padding: 3px 12px; border-radius: 20px; border: 1px solid var(--border); pointer-events: none; white-space: nowrap; }
+.detail { width: 250px; flex-shrink: 0; background: var(--surface); border-left: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; transform: translateX(250px); transition: transform 0.25s ease; }
+.detail.open { transform: translateX(0); }
+.dhead { padding: 1.1rem 1.1rem 0.9rem; border-bottom: 1px solid var(--border); position: relative; }
+.dclose { position: absolute; top: 0.8rem; right: 0.8rem; width: 20px; height: 20px; border: 1px solid var(--border); border-radius: 4px; background: none; cursor: pointer; font-size: 11px; color: var(--muted); display: flex; align-items: center; justify-content: center; }
+.dclose:hover { background: var(--bg); }
+.dname { font-family: 'Noto Serif JP', serif; font-size: 1.1rem; font-weight: 600; margin-bottom: 4px; }
+.dtags { display: flex; gap: 5px; flex-wrap: wrap; }
+.dtag { font-size: 0.65rem; padding: 2px 7px; border-radius: 3px; font-weight: 500; }
+.dbody { flex: 1; overflow-y: auto; padding: 0.9rem 1.1rem; }
+.dbody::-webkit-scrollbar { width: 3px; }
+.dbody::-webkit-scrollbar-thumb { background: var(--border); }
+.dsec { font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); margin: 0.8rem 0 0.4rem; }
+.dsec:first-child { margin-top: 0; }
+.wcard { background: var(--bg); border-radius: 5px; padding: 0.5rem 0.65rem; margin-bottom: 5px; border-left: 3px solid transparent; }
+.wtitle { font-size: 0.73rem; color: var(--text); line-height: 1.4; margin-bottom: 2px; }
+.wmeta { display: flex; gap: 5px; align-items: center; }
+.wdate { font-size: 0.62rem; color: var(--muted); }
+.wrtag { font-size: 0.58rem; padding: 1px 4px; border-radius: 3px; }
+.chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.chip { font-size: 0.68rem; padding: 2px 8px; border-radius: 12px; border: 1px solid var(--border); color: var(--muted); cursor: pointer; background: var(--bg); transition: all 0.15s; }
+.chip:hover { border-color: var(--accent); color: var(--text); background: #fdf8f2; }
+.dstats { padding: 0.6rem 1.1rem; border-top: 1px solid var(--border); display: flex; gap: 1rem; flex-shrink: 0; }
+.stat { text-align: center; }
+.snum { font-size: 1rem; font-weight: 600; font-family: 'Noto Serif JP', serif; }
+.slbl { font-size: 0.58rem; color: var(--muted); }
+.bubble { opacity: 0.1; }
+.bubble-label { font-size: 10px; font-family: 'Noto Sans JP', sans-serif; opacity: 0.5; pointer-events: none; font-weight: 500; }
+.link { stroke: #DDD8D0; stroke-width: 1.5; fill: none; opacity: 0.7; }
+.link.hl { stroke: #C9A96E; stroke-width: 2.5; opacity: 1; }
+.link.dim { opacity: 0.04; }
+.node circle { stroke-width: 2; cursor: pointer; }
+.node text { font-family: 'Noto Sans JP', sans-serif; font-size: 10px; pointer-events: none; fill: #4a4540; }
+.node.dim circle { opacity: 0.12; }
+.node.dim text { opacity: 0.08; }
+/* sales badge */
+.sales-badge { font-size: 0.58rem; padding: 1px 5px; border-radius: 3px; background: #fdf8f2; color: var(--accent); border: 1px solid #f0debb; margin-top: 3px; display: inline-block; }
 </style>
 </head>
 <body>
-
 <header>
-  <div class="header-left">
+  <div class="brand">
     <h1>日腐人二下 · 演员关系图鉴</h1>
-    <p>数据来源：社区整理（统计至 2026/3） · 点击演员节点查看详情 · 连线代表共演关系</p>
+    <p>数据来源：社区整理 · 统计至 2026/3 · 气泡=事务所 · 连线=共演BL</p>
   </div>
-  <div class="legend">
-    <div class="legend-item">
-      <div class="legend-dot" style="background:#E8455A"></div>
-      <span>攻</span>
+  <div class="controls">
+    <div class="legend">
+      <div class="legend-item"><div class="legend-dot" style="background:#D94F6B"></div>攻</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#4A7FC1"></div>受</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#7C5CBF"></div>两栖</div>
     </div>
-    <div class="legend-item">
-      <div class="legend-dot" style="background:#3B82C4"></div>
-      <span>受</span>
+    <div class="filters">
+      <button class="fbtn on" onclick="setFilter('全部',this)">全部</button>
+      <button class="fbtn" onclick="setFilter('攻',this)">攻</button>
+      <button class="fbtn" onclick="setFilter('受',this)">受</button>
+      <button class="fbtn" onclick="setFilter('两栖',this)">两栖</button>
     </div>
-    <div class="legend-item">
-      <div class="legend-dot" style="background:#8B5CF6"></div>
-      <span>攻受两栖</span>
-    </div>
-    <div class="legend-item">
-      <div class="legend-dot" style="background:#9CA3AF"></div>
-      <span>未知</span>
-    </div>
+    <button class="publish-btn loading" id="publish-btn" onclick="publishToGitHub()">发布中...</button>
   </div>
 </header>
-
-<div class="layout">
+<div class="main">
   <div class="sidebar">
-    <div class="sidebar-search">
-      <input type="text" id="search-input" placeholder="搜索演员名..." />
-    </div>
-    <div class="actor-list" id="actor-list"></div>
+    <input id="search" type="text" placeholder="搜索演员..." oninput="renderList(this.value)">
+    <div class="alist" id="alist"><div class="aitem" data-name="武田航平" onclick="selectActor('武田航平')">
+      <div class="adot" style="background:#4A7FC1"></div>
+      <div class="aname">武田航平</div>
+      <span class="abadge" style="background:#edf3fb;color:#4A7FC1">受</span>
+    </div><div class="aitem" data-name="沢村玲" onclick="selectActor('沢村玲')">
+      <div class="adot" style="background:#D94F6B"></div>
+      <div class="aname">沢村玲<span style="font-size:0.58rem;color:#F0B86E;margin-left:3px">ebidan</span></div>
+      <span class="abadge" style="background:#fdf0f3;color:#D94F6B">攻</span>
+    </div><div class="aitem" data-name="田中洸希" onclick="selectActor('田中洸希')">
+      <div class="adot" style="background:#4A7FC1"></div>
+      <div class="aname">田中洸希<span style="font-size:0.58rem;color:#F0B86E;margin-left:3px">ebidan</span></div>
+      <span class="abadge" style="background:#edf3fb;color:#4A7FC1">受</span>
+    </div><div class="aitem" data-name="佐藤友祐" onclick="selectActor('佐藤友祐')">
+      <div class="adot" style="background:#7C5CBF"></div>
+      <div class="aname">佐藤友祐</div>
+      <span class="abadge" style="background:#f2eefb;color:#7C5CBF">两栖</span>
+    </div><div class="aitem" data-name="佐藤留雅" onclick="selectActor('佐藤留雅')">
+      <div class="adot" style="background:#D94F6B"></div>
+      <div class="aname">佐藤留雅</div>
+      <span class="abadge" style="background:#fdf0f3;color:#D94F6B">攻</span>
+    </div><div class="aitem" data-name="山中柔太朗" onclick="selectActor('山中柔太朗')">
+      <div class="adot" style="background:#D94F6B"></div>
+      <div class="aname">山中柔太朗<span style="font-size:0.58rem;color:#F0B86E;margin-left:3px">ebidan</span></div>
+      <span class="abadge" style="background:#fdf0f3;color:#D94F6B">攻</span>
+    </div><div class="aitem" data-name="高松aloha" onclick="selectActor('高松aloha')">
+      <div class="adot" style="background:#4A7FC1"></div>
+      <div class="aname">高松aloha</div>
+      <span class="abadge" style="background:#edf3fb;color:#4A7FC1">受</span>
+    </div><div class="aitem" data-name="简秀吉" onclick="selectActor('简秀吉')">
+      <div class="adot" style="background:#D94F6B"></div>
+      <div class="aname">简秀吉<span style="font-size:0.58rem;color:#E8C880;margin-left:3px">MR8</span></div>
+      <span class="abadge" style="background:#fdf0f3;color:#D94F6B">攻</span>
+    </div><div class="aitem" data-name="藤本光太" onclick="selectActor('藤本光太')">
+      <div class="adot" style="background:#7C5CBF"></div>
+      <div class="aname">藤本光太<span style="font-size:0.58rem;color:#80B8E8;margin-left:3px">TopCoat</span></div>
+      <span class="abadge" style="background:#f2eefb;color:#7C5CBF">两栖</span>
+    </div><div class="aitem" data-name="奥野壮" onclick="selectActor('奥野壮')">
+      <div class="adot" style="background:#4A7FC1"></div>
+      <div class="aname">奥野壮<span style="font-size:0.58rem;color:#C8A0E8;margin-left:3px">オスカー</span></div>
+      <span class="abadge" style="background:#edf3fb;color:#4A7FC1">受</span>
+    </div><div class="aitem" data-name="阿久津仁爱" onclick="selectActor('阿久津仁爱')">
+      <div class="adot" style="background:#7C5CBF"></div>
+      <div class="aname">阿久津仁爱</div>
+      <span class="abadge" style="background:#f2eefb;color:#7C5CBF">两栖</span>
+    </div><div class="aitem" data-name="松冈广大" onclick="selectActor('松冈广大')">
+      <div class="adot" style="background:#4A7FC1"></div>
+      <div class="aname">松冈广大<span style="font-size:0.58rem;color:#A8C87E;margin-left:3px">アミューズ</span></div>
+      <span class="abadge" style="background:#edf3fb;color:#4A7FC1">受</span>
+    </div><div class="aitem" data-name="濑户利树" onclick="selectActor('濑户利树')">
+      <div class="adot" style="background:#4A7FC1"></div>
+      <div class="aname">濑户利树</div>
+      <span class="abadge" style="background:#edf3fb;color:#4A7FC1">受</span>
+    </div><div class="aitem" data-name="伊藤明日阳" onclick="selectActor('伊藤明日阳')">
+      <div class="adot" style="background:#4A7FC1"></div>
+      <div class="aname">伊藤明日阳<span style="font-size:0.58rem;color:#E8A0B4;margin-left:3px">研音</span></div>
+      <span class="abadge" style="background:#edf3fb;color:#4A7FC1">受</span>
+    </div><div class="aitem" data-name="古川雄辉" onclick="selectActor('古川雄辉')">
+      <div class="adot" style="background:#D94F6B"></div>
+      <div class="aname">古川雄辉</div>
+      <span class="abadge" style="background:#fdf0f3;color:#D94F6B">攻</span>
+    </div><div class="aitem" data-name="井上想良" onclick="selectActor('井上想良')">
+      <div class="adot" style="background:#7C5CBF"></div>
+      <div class="aname">井上想良<span style="font-size:0.58rem;color:#E8A080;margin-left:3px">渡辺</span></div>
+      <span class="abadge" style="background:#f2eefb;color:#7C5CBF">两栖</span>
+    </div><div class="aitem" data-name="多和田任益" onclick="selectActor('多和田任益')">
+      <div class="adot" style="background:#D94F6B"></div>
+      <div class="aname">多和田任益</div>
+      <span class="abadge" style="background:#fdf0f3;color:#D94F6B">攻</span>
+    </div><div class="aitem" data-name="长谷川慎" onclick="selectActor('长谷川慎')">
+      <div class="adot" style="background:#7C5CBF"></div>
+      <div class="aname">长谷川慎</div>
+      <span class="abadge" style="background:#f2eefb;color:#7C5CBF">两栖</span>
+    </div><div class="aitem" data-name="金子隼也" onclick="selectActor('金子隼也')">
+      <div class="adot" style="background:#4A7FC1"></div>
+      <div class="aname">金子隼也</div>
+      <span class="abadge" style="background:#edf3fb;color:#4A7FC1">受</span>
+    </div><div class="aitem" data-name="中川大辅" onclick="selectActor('中川大辅')">
+      <div class="adot" style="background:#D94F6B"></div>
+      <div class="aname">中川大辅<span style="font-size:0.58rem;color:#E8A0B4;margin-left:3px">研音</span></div>
+      <span class="abadge" style="background:#fdf0f3;color:#D94F6B">攻</span>
+    </div><div class="aitem" data-name="水泽林太郎" onclick="selectActor('水泽林太郎')">
+      <div class="adot" style="background:#D94F6B"></div>
+      <div class="aname">水泽林太郎</div>
+      <span class="abadge" style="background:#fdf0f3;color:#D94F6B">攻</span>
+    </div><div class="aitem" data-name="仓悠贵" onclick="selectActor('仓悠贵')">
+      <div class="adot" style="background:#4A7FC1"></div>
+      <div class="aname">仓悠贵</div>
+      <span class="abadge" style="background:#edf3fb;color:#4A7FC1">受</span>
+    </div><div class="aitem" data-name="町田启太" onclick="selectActor('町田启太')">
+      <div class="adot" style="background:#D94F6B"></div>
+      <div class="aname">町田启太<span style="font-size:0.58rem;color:#7EC8C8;margin-left:3px">LDH</span></div>
+      <span class="abadge" style="background:#fdf0f3;color:#D94F6B">攻</span>
+    </div><div class="aitem" data-name="岩濑洋志" onclick="selectActor('岩濑洋志')">
+      <div class="adot" style="background:#D94F6B"></div>
+      <div class="aname">岩濑洋志</div>
+      <span class="abadge" style="background:#fdf0f3;color:#D94F6B">攻</span>
+    </div><div class="aitem" data-name="增子敦贵" onclick="selectActor('增子敦贵')">
+      <div class="adot" style="background:#4A7FC1"></div>
+      <div class="aname">增子敦贵</div>
+      <span class="abadge" style="background:#edf3fb;color:#4A7FC1">受</span>
+    </div><div class="aitem" data-name="曾田陵介" onclick="selectActor('曾田陵介')">
+      <div class="adot" style="background:#4A7FC1"></div>
+      <div class="aname">曾田陵介</div>
+      <span class="abadge" style="background:#edf3fb;color:#4A7FC1">受</span>
+    </div><div class="aitem" data-name="稻叶友" onclick="selectActor('稻叶友')">
+      <div class="adot" style="background:#4A7FC1"></div>
+      <div class="aname">稻叶友</div>
+      <span class="abadge" style="background:#edf3fb;color:#4A7FC1">受</span>
+    </div><div class="aitem" data-name="八神庆仁郎" onclick="selectActor('八神庆仁郎')">
+      <div class="adot" style="background:#4A7FC1"></div>
+      <div class="aname">八神庆仁郎</div>
+      <span class="abadge" style="background:#edf3fb;color:#4A7FC1">受</span>
+    </div><div class="aitem" data-name="庄司浩平" onclick="selectActor('庄司浩平')">
+      <div class="adot" style="background:#D94F6B"></div>
+      <div class="aname">庄司浩平<span style="font-size:0.58rem;color:#C8A0E8;margin-left:3px">オスカー</span></div>
+      <span class="abadge" style="background:#fdf0f3;color:#D94F6B">攻</span>
+    </div><div class="aitem" data-name="风间俊介" onclick="selectActor('风间俊介')">
+      <div class="adot" style="background:#4A7FC1"></div>
+      <div class="aname">风间俊介<span style="font-size:0.58rem;color:#aaa;margin-left:3px">ジャニーズ系</span></div>
+      <span class="abadge" style="background:#edf3fb;color:#4A7FC1">受</span>
+    </div><div class="aitem" data-name="武藤润" onclick="selectActor('武藤润')">
+      <div class="adot" style="background:#D94F6B"></div>
+      <div class="aname">武藤润<span style="font-size:0.58rem;color:#F0B86E;margin-left:3px">ebidan</span></div>
+      <span class="abadge" style="background:#fdf0f3;color:#D94F6B">攻</span>
+    </div><div class="aitem" data-name="醍醐虎汰朗" onclick="selectActor('醍醐虎汰朗')">
+      <div class="adot" style="background:#4A7FC1"></div>
+      <div class="aname">醍醐虎汰朗<span style="font-size:0.58rem;color:#A0D4B8;margin-left:3px">A-Light</span></div>
+      <span class="abadge" style="background:#edf3fb;color:#4A7FC1">受</span>
+    </div><div class="aitem" data-name="和田雅成" onclick="selectActor('和田雅成')">
+      <div class="adot" style="background:#D94F6B"></div>
+      <div class="aname">和田雅成</div>
+      <span class="abadge" style="background:#fdf0f3;color:#D94F6B">攻</span>
+    </div><div class="aitem" data-name="高桥大翔" onclick="selectActor('高桥大翔')">
+      <div class="adot" style="background:#4A7FC1"></div>
+      <div class="aname">高桥大翔</div>
+      <span class="abadge" style="background:#edf3fb;color:#4A7FC1">受</span>
+    </div><div class="aitem" data-name="长野凌大" onclick="selectActor('长野凌大')">
+      <div class="adot" style="background:#D94F6B"></div>
+      <div class="aname">长野凌大</div>
+      <span class="abadge" style="background:#fdf0f3;color:#D94F6B">攻</span>
+    </div><div class="aitem" data-name="藤林泰也" onclick="selectActor('藤林泰也')">
+      <div class="adot" style="background:#4A7FC1"></div>
+      <div class="aname">藤林泰也</div>
+      <span class="abadge" style="background:#edf3fb;color:#4A7FC1">受</span>
+    </div><div class="aitem" data-name="加藤大悟" onclick="selectActor('加藤大悟')">
+      <div class="adot" style="background:#D94F6B"></div>
+      <div class="aname">加藤大悟<span style="font-size:0.58rem;color:#E8A080;margin-left:3px">渡辺</span></div>
+      <span class="abadge" style="background:#fdf0f3;color:#D94F6B">攻</span>
+    </div><div class="aitem" data-name="塩崎太智" onclick="selectActor('塩崎太智')">
+      <div class="adot" style="background:#4A7FC1"></div>
+      <div class="aname">塩崎太智<span style="font-size:0.58rem;color:#F0B86E;margin-left:3px">ebidan</span></div>
+      <span class="abadge" style="background:#edf3fb;color:#4A7FC1">受</span>
+    </div><div class="aitem" data-name="岩桥玄树" onclick="selectActor('岩桥玄树')">
+      <div class="adot" style="background:#D94F6B"></div>
+      <div class="aname">岩桥玄树</div>
+      <span class="abadge" style="background:#fdf0f3;color:#D94F6B">攻</span>
+    </div><div class="aitem" data-name="相马理" onclick="selectActor('相马理')">
+      <div class="adot" style="background:#4A7FC1"></div>
+      <div class="aname">相马理</div>
+      <span class="abadge" style="background:#edf3fb;color:#4A7FC1">受</span>
+    </div><div class="aitem" data-name="平野宏周" onclick="selectActor('平野宏周')">
+      <div class="adot" style="background:#D94F6B"></div>
+      <div class="aname">平野宏周<span style="font-size:0.58rem;color:#F4A460;margin-left:3px">Sun Music</span></div>
+      <span class="abadge" style="background:#fdf0f3;color:#D94F6B">攻</span>
+    </div><div class="aitem" data-name="宇佐卓真" onclick="selectActor('宇佐卓真')">
+      <div class="adot" style="background:#4A7FC1"></div>
+      <div class="aname">宇佐卓真<span style="font-size:0.58rem;color:#DDA0DD;margin-left:3px">アソビシステム</span></div>
+      <span class="abadge" style="background:#edf3fb;color:#4A7FC1">受</span>
+    </div><div class="aitem" data-name="堀夏喜" onclick="selectActor('堀夏喜')">
+      <div class="adot" style="background:#D94F6B"></div>
+      <div class="aname">堀夏喜<span style="font-size:0.58rem;color:#7EC8C8;margin-left:3px">LDH</span></div>
+      <span class="abadge" style="background:#fdf0f3;color:#D94F6B">攻</span>
+    </div><div class="aitem" data-name="池田匡志" onclick="selectActor('池田匡志')">
+      <div class="adot" style="background:#4A7FC1"></div>
+      <div class="aname">池田匡志</div>
+      <span class="abadge" style="background:#edf3fb;color:#4A7FC1">受</span>
+    </div></div>
   </div>
-
-  <div class="graph-area">
-    <svg id="graph-svg"></svg>
-    <div class="info-panel" id="info-panel">
-      <button class="close-btn" onclick="closePanel()">✕</button>
-      <div class="info-panel-name" id="panel-name"></div>
-      <div class="info-panel-role" id="panel-role"></div>
-      <div class="info-section-title">出演作品</div>
-      <div id="panel-works"></div>
-      <div class="info-section-title">共演过</div>
-      <div class="costar-list" id="panel-costars"></div>
+  <div class="graph">
+    <svg id="svg"><g><g><ellipse cx="133.2652039726274" cy="637.6409319488242" rx="139.6939274639931" ry="116.50079498312203" fill="#F0B86E" class="bubble"></ellipse><text x="133.2652039726274" y="513.1401369657021" text-anchor="middle" class="bubble-label" fill="#F0B86E">ebidan (5)</text><circle cx="916.531300968153" cy="789.5596655011761" r="38" fill="#E8C880" class="bubble"></circle><text x="916.531300968153" y="747.5596655011761" text-anchor="middle" class="bubble-label" fill="#E8C880">MR8</text><circle cx="1038.421619051119" cy="729.6216064746329" r="38" fill="#80B8E8" class="bubble"></circle><text x="1038.421619051119" y="687.6216064746329" text-anchor="middle" class="bubble-label" fill="#80B8E8">TopCoat</text><ellipse cx="796.7757132077268" cy="604.2616561240169" rx="79.66038765489492" ry="102.42056271489184" fill="#C8A0E8" class="bubble"></ellipse><text x="796.7757132077268" y="493.84109340912505" text-anchor="middle" class="bubble-label" fill="#C8A0E8">オスカー (2)</text><circle cx="371.0966366595166" cy="-495.9381670515992" r="38" fill="#A8C87E" class="bubble"></circle><text x="371.0966366595166" y="-537.9381670515992" text-anchor="middle" class="bubble-label" fill="#A8C87E">アミューズ</text><ellipse cx="59.09044019752838" cy="374.41784113865833" rx="55" ry="106.85488787469299" fill="#E8A0B4" class="bubble"></ellipse><text x="59.09044019752838" y="259.56295326396537" text-anchor="middle" class="bubble-label" fill="#E8A0B4">研音 (2)</text><ellipse cx="-213.08349863652506" cy="655.7436139496486" rx="100.90247103671635" ry="64.3527166338074" fill="#E8A080" class="bubble"></ellipse><text x="-213.08349863652506" y="583.3908973158412" text-anchor="middle" class="bubble-label" fill="#E8A080">渡辺 (2)</text><ellipse cx="1022.1198111278752" cy="-586.4945110178746" rx="65.22817890125339" ry="86.97996276985481" fill="#7EC8C8" class="bubble"></ellipse><text x="1022.1198111278752" y="-681.4744737877295" text-anchor="middle" class="bubble-label" fill="#7EC8C8">LDH (2)</text><circle cx="689.6565319494537" cy="410.30917659808256" r="38" fill="#aaa" class="bubble"></circle><text x="689.6565319494537" y="368.30917659808256" text-anchor="middle" class="bubble-label" fill="#aaa">ジャニーズ系</text><circle cx="163.8043431319554" cy="207.69387538047" r="38" fill="#A0D4B8" class="bubble"></circle><text x="163.8043431319554" y="165.69387538047" text-anchor="middle" class="bubble-label" fill="#A0D4B8">A-Light</text><circle cx="843.9068168791706" cy="-360.24025415959903" r="38" fill="#F4A460" class="bubble"></circle><text x="843.9068168791706" y="-402.24025415959903" text-anchor="middle" class="bubble-label" fill="#F4A460">Sun Music</text><circle cx="738.8582742112294" cy="-443.35368279897443" r="38" fill="#DDA0DD" class="bubble"></circle><text x="738.8582742112294" y="-485.35368279897443" text-anchor="middle" class="bubble-label" fill="#DDA0DD">アソビシステム</text></g><g><line class="link" x1="204.1148855633312" y1="602.6706675425968" x2="219.7173057107604" y2="703.0037964038987"></line><line class="link" x1="219.7173057107604" y1="703.0037964038987" x2="380.147011969653" y2="757.5812694036014"></line><line class="link" x1="817.8350575913811" y1="1362.1445662698497" x2="927.7608810394784" y2="1286.9949514612047"></line><line class="link" x1="73.77034401241856" y1="570.0022064376546" x2="-66.51151775668373" y2="454.76097682315253"></line><line class="link" x1="916.531300968153" y1="789.5596655011761" x2="826.4361008626216" y2="656.6822188389087"></line><line class="link" x1="916.531300968153" y1="789.5596655011761" x2="1038.421619051119" y2="729.6216064746329"></line><line class="link" x1="464.3473360391445" y1="-400.43620177362567" x2="371.0966366595166" y2="-495.9381670515992"></line><line class="link" x1="55.38901808804546" y1="431.2727290133513" x2="128.39403379385266" y2="628.4309048965252"></line><line class="link" x1="62.7918623070113" y1="317.5629532639653" x2="163.8043431319554" y2="207.69387538047"></line><line class="link" x1="1353.6680758263844" y1="508.1301223699336" x2="1332.5520625843583" y2="640.9715561428533"></line><line class="link" x1="898.7312588494651" y1="243.18709848574943" x2="897.5078143518894" y2="111.85419440179032"></line><line class="link" x1="767.1153255528318" y1="551.841093409125" x2="689.6565319494537" y2="410.30917659808256"></line><line class="link" x1="173.73880294288003" y1="-62.40311173764246" x2="52.3385158886498" y2="-119.8627519468694"></line><line class="link" x1="169.3660658857489" y1="1340.1074115048289" x2="39.901504416008635" y2="1304.9118330887784"></line><line class="link" x1="-162.18102759980871" y1="670.096330583456" x2="40.329450782774174" y2="684.0970844634455"></line><line class="link" x1="123.95245237472624" y1="472.50159808541844" x2="-19.082364052144417" y2="565.1085997115758"></line><line class="link" x1="843.9068168791706" y1="-360.24025415959903" x2="738.8582742112294" y2="-443.35368279897443"></line><line class="link" x1="1037.3479900291286" y1="-549.5145482480199" x2="1083.7379189429334" y2="-413.587121288293"></line></g><g><g class="node" transform="translate(1720.7815553340001,503.77980452364994)"><circle r="18" fill="#edf3fb" stroke="#4A7FC1"></circle><text dy="33" text-anchor="middle">武田航平</text></g><g class="node" transform="translate(204.1148855633312,602.6706675425968)"><circle r="18" fill="#fdf0f3" stroke="#D94F6B"></circle><text dy="33" text-anchor="middle">沢村玲</text></g><g class="node" transform="translate(219.7173057107604,703.0037964038987)"><circle r="18" fill="#edf3fb" stroke="#4A7FC1"></circle><text dy="33" text-anchor="middle">田中洸希</text></g><g class="node" transform="translate(817.8350575913811,1362.1445662698497)"><circle r="18" fill="#f2eefb" stroke="#7C5CBF"></circle><text dy="33" text-anchor="middle">佐藤友祐</text></g><g class="node" transform="translate(-553.2039534574797,-208.8233617420431)"><circle r="18" fill="#fdf0f3" stroke="#D94F6B"></circle><text dy="33" text-anchor="middle">佐藤留雅</text></g><g class="node" transform="translate(73.77034401241856,570.0022064376546)"><circle r="18" fill="#fdf0f3" stroke="#D94F6B"></circle><text dy="33" text-anchor="middle">山中柔太朗</text></g><g class="node" transform="translate(-66.51151775668373,454.76097682315253)"><circle r="18" fill="#edf3fb" stroke="#4A7FC1"></circle><text dy="33" text-anchor="middle">高松aloha</text></g><g class="node" transform="translate(916.531300968153,789.5596655011761)"><circle r="18" fill="#fdf0f3" stroke="#D94F6B"></circle><text dy="33" text-anchor="middle">简秀吉</text></g><g class="node" transform="translate(1038.421619051119,729.6216064746329)"><circle r="18" fill="#f2eefb" stroke="#7C5CBF"></circle><text dy="33" text-anchor="middle">藤本光太</text></g><g class="node" transform="translate(826.4361008626216,656.6822188389087)"><circle r="18" fill="#edf3fb" stroke="#4A7FC1"></circle><text dy="33" text-anchor="middle">奥野壮</text></g><g class="node" transform="translate(464.3473360391445,-400.43620177362567)"><circle r="18" fill="#f2eefb" stroke="#7C5CBF"></circle><text dy="33" text-anchor="middle">阿久津仁爱</text></g><g class="node" transform="translate(371.0966366595166,-495.9381670515992)"><circle r="18" fill="#edf3fb" stroke="#4A7FC1"></circle><text dy="33" text-anchor="middle">松冈广大</text></g><g class="node" transform="translate(1655.7416243933808,22.143223219438013)"><circle r="18" fill="#edf3fb" stroke="#4A7FC1"></circle><text dy="33" text-anchor="middle">濑户利树</text></g><g class="node" transform="translate(55.38901808804546,431.2727290133513)"><circle r="18" fill="#edf3fb" stroke="#4A7FC1"></circle><text dy="33" text-anchor="middle">伊藤明日阳</text></g><g class="node" transform="translate(616.9553491740076,-769.5384357520638)"><circle r="18" fill="#fdf0f3" stroke="#D94F6B"></circle><text dy="33" text-anchor="middle">古川雄辉</text></g><g class="node" transform="translate(-263.9859696732414,641.3908973158412)"><circle r="18" fill="#f2eefb" stroke="#7C5CBF"></circle><text dy="33" text-anchor="middle">井上想良</text></g><g class="node" transform="translate(380.147011969653,757.5812694036014)"><circle r="18" fill="#fdf0f3" stroke="#D94F6B"></circle><text dy="33" text-anchor="middle">多和田任益</text></g><g class="node" transform="translate(1450.6057619710923,-406.47456595885575)"><circle r="18" fill="#f2eefb" stroke="#7C5CBF"></circle><text dy="33" text-anchor="middle">长谷川慎</text></g><g class="node" transform="translate(-640.7729186573284,942.7968566412941)"><circle r="18" fill="#edf3fb" stroke="#4A7FC1"></circle><text dy="33" text-anchor="middle">金子隼也</text></g><g class="node" transform="translate(62.7918623070113,317.5629532639653)"><circle r="18" fill="#fdf0f3" stroke="#D94F6B"></circle><text dy="33" text-anchor="middle">中川大辅</text></g><g class="node" transform="translate(1353.6680758263844,508.1301223699336)"><circle r="18" fill="#fdf0f3" stroke="#D94F6B"></circle><text dy="33" text-anchor="middle">水泽林太郎</text></g><g class="node" transform="translate(1332.5520625843583,640.9715561428533)"><circle r="18" fill="#edf3fb" stroke="#4A7FC1"></circle><text dy="33" text-anchor="middle">仓悠贵</text></g><g class="node" transform="translate(1006.8916322266218,-623.4744737877295)"><circle r="18" fill="#fdf0f3" stroke="#D94F6B"></circle><text dy="33" text-anchor="middle">町田启太</text></g><g class="node" transform="translate(898.7312588494651,243.18709848574943)"><circle r="18" fill="#fdf0f3" stroke="#D94F6B"></circle><text dy="33" text-anchor="middle">岩濑洋志</text></g><g class="node" transform="translate(897.5078143518894,111.85419440179032)"><circle r="18" fill="#edf3fb" stroke="#4A7FC1"></circle><text dy="33" text-anchor="middle">增子敦贵</text></g><g class="node" transform="translate(927.7608810394784,1286.9949514612047)"><circle r="18" fill="#edf3fb" stroke="#4A7FC1"></circle><text dy="33" text-anchor="middle">曾田陵介</text></g><g class="node" transform="translate(1386.9719367119146,1227.8860583511798)"><circle r="18" fill="#edf3fb" stroke="#4A7FC1"></circle><text dy="33" text-anchor="middle">稻叶友</text></g><g class="node" transform="translate(-35.48270853587225,-415.4450910963762)"><circle r="18" fill="#edf3fb" stroke="#4A7FC1"></circle><text dy="33" text-anchor="middle">八神庆仁郎</text></g><g class="node" transform="translate(767.1153255528318,551.841093409125)"><circle r="18" fill="#fdf0f3" stroke="#D94F6B"></circle><text dy="33" text-anchor="middle">庄司浩平</text></g><g class="node" transform="translate(689.6565319494537,410.30917659808256)"><circle r="18" fill="#edf3fb" stroke="#4A7FC1"></circle><text dy="33" text-anchor="middle">风间俊介</text></g><g class="node" transform="translate(128.39403379385266,628.4309048965252)"><circle r="18" fill="#fdf0f3" stroke="#D94F6B"></circle><text dy="33" text-anchor="middle">武藤润</text></g><g class="node" transform="translate(163.8043431319554,207.69387538047)"><circle r="18" fill="#edf3fb" stroke="#4A7FC1"></circle><text dy="33" text-anchor="middle">醍醐虎汰朗</text></g><g class="node" transform="translate(173.73880294288003,-62.40311173764246)"><circle r="18" fill="#fdf0f3" stroke="#D94F6B"></circle><text dy="33" text-anchor="middle">和田雅成</text></g><g class="node" transform="translate(52.3385158886498,-119.8627519468694)"><circle r="18" fill="#edf3fb" stroke="#4A7FC1"></circle><text dy="33" text-anchor="middle">高桥大翔</text></g><g class="node" transform="translate(169.3660658857489,1340.1074115048289)"><circle r="18" fill="#fdf0f3" stroke="#D94F6B"></circle><text dy="33" text-anchor="middle">长野凌大</text></g><g class="node" transform="translate(39.901504416008635,1304.9118330887784)"><circle r="18" fill="#edf3fb" stroke="#4A7FC1"></circle><text dy="33" text-anchor="middle">藤林泰也</text></g><g class="node" transform="translate(-162.18102759980871,670.096330583456)"><circle r="18" fill="#fdf0f3" stroke="#D94F6B"></circle><text dy="33" text-anchor="middle">加藤大悟</text></g><g class="node" transform="translate(40.329450782774174,684.0970844634455)"><circle r="18" fill="#edf3fb" stroke="#4A7FC1"></circle><text dy="33" text-anchor="middle">塩崎太智</text></g><g class="node" transform="translate(123.95245237472624,472.50159808541844)"><circle r="18" fill="#fdf0f3" stroke="#D94F6B"></circle><text dy="33" text-anchor="middle">岩桥玄树</text></g><g class="node" transform="translate(-19.082364052144417,565.1085997115758)"><circle r="18" fill="#edf3fb" stroke="#4A7FC1"></circle><text dy="33" text-anchor="middle">相马理</text></g><g class="node" transform="translate(843.9068168791706,-360.24025415959903)"><circle r="18" fill="#fdf0f3" stroke="#D94F6B"></circle><text dy="33" text-anchor="middle">平野宏周</text></g><g class="node" transform="translate(738.8582742112294,-443.35368279897443)"><circle r="18" fill="#edf3fb" stroke="#4A7FC1"></circle><text dy="33" text-anchor="middle">宇佐卓真</text></g><g class="node" transform="translate(1037.3479900291286,-549.5145482480199)"><circle r="18" fill="#fdf0f3" stroke="#D94F6B"></circle><text dy="33" text-anchor="middle">堀夏喜</text></g><g class="node" transform="translate(1083.7379189429334,-413.587121288293)"><circle r="18" fill="#edf3fb" stroke="#4A7FC1"></circle><text dy="33" text-anchor="middle">池田匡志</text></g></g></g></svg>
+    <div class="hint">滚轮缩放 · 拖拽节点 · 点击查看详情</div>
+  </div>
+  <div class="detail" id="detail">
+    <div class="dhead">
+      <button class="dclose" onclick="closeDetail()">✕</button>
+      <div class="dname" id="d-name"></div>
+      <div class="dtags" id="d-tags"></div>
     </div>
-    <div class="hint">滚轮缩放 · 拖拽移动 · 点击演员查看详情</div>
+    <div class="dbody">
+      <div class="dsec">出演作品</div>
+      <div id="d-works"></div>
+      <div class="dsec">共演过</div>
+      <div class="chips" id="d-costars"></div>
+    </div>
+    <div class="dstats" id="d-stats"></div>
   </div>
 </div>
-
 <script>
+// ========== GitHub 发布配置 ==========
+// token 存在浏览器本地，不写进代码，安全！
+const GITHUB_CONFIG = {
+  owner: 'SIAK-q',
+  repo: 'JBL-NETWORK',
+  path: 'bl-network.html',
+  branch: 'main'
+};
+
+function getToken() {
+  return localStorage.getItem('gh_token_bl');
+}
+
+function promptToken() {
+  const t = prompt('请输入你的 GitHub Personal Access Token（只存在你的浏览器里，不会上传）：');
+  if(t && t.trim()) {
+    localStorage.setItem('gh_token_bl', t.trim());
+    return t.trim();
+  }
+  return null;
+}
+
+async function publishToGitHub() {
+  const btn = document.getElementById('publish-btn');
+  let token = getToken();
+  if(!token) {
+    token = promptToken();
+    if(!token) return;
+  }
+  btn.textContent = '发布中...';
+  btn.classList.add('loading');
+  try {
+    // 1. 获取文件当前 SHA
+    const getRes = await fetch(
+      `https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/contents/${GITHUB_CONFIG.path}`,
+      { headers: { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github.v3+json' } }
+    );
+    if(getRes.status === 401) {
+      localStorage.removeItem('gh_token_bl');
+      throw new Error('Token 无效，请重新输入');
+    }
+    const getJson = await getRes.json();
+    const sha = getJson.sha;
+    // 2. 当前页面转 base64
+    const content = btoa(unescape(encodeURIComponent(document.documentElement.outerHTML)));
+    // 3. 推送
+    const putRes = await fetch(
+      `https://api.github.com/repos/${GITHUB_CONFIG.owner}/${GITHUB_CONFIG.repo}/contents/${GITHUB_CONFIG.path}`,
+      {
+        method: 'PUT',
+        headers: { 'Authorization': `token ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: `update: 日腐图鉴 ${new Date().toLocaleDateString('zh-CN')}`,
+          content, sha, branch: GITHUB_CONFIG.branch
+        })
+      }
+    );
+    if(putRes.ok) {
+      btn.textContent = '✓ 发布成功！';
+      btn.classList.remove('loading');
+      btn.classList.add('success');
+      setTimeout(()=>{ btn.textContent = '↑ 发布到 GitHub'; btn.classList.remove('success'); }, 3000);
+    } else {
+      throw new Error('推送失败');
+    }
+  } catch(e) {
+    btn.textContent = '✗ ' + e.message;
+    btn.classList.remove('loading');
+    btn.classList.add('error');
+    setTimeout(()=>{ btn.textContent = '↑ 发布到 GitHub'; btn.classList.remove('error'); }, 4000);
+  }
+}
+
+// ========== 数据 ==========
+const RC = {'攻':'#D94F6B','受':'#4A7FC1','两栖':'#7C5CBF','未知':'#9CA3AF'};
+const RB = {'攻':'#fdf0f3','受':'#edf3fb','两栖':'#f2eefb','未知':'#f3f4f6'};
+const AGENCY_COLORS = {
+  '研音':'#E8A0B4', 'ebidan':'#F0B86E', 'LDH':'#7EC8C8',
+  'アミューズ':'#A8C87E', 'オスカー':'#C8A0E8', 'MR8':'#E8C880',
+  'TopCoat':'#80B8E8', '渡辺':'#E8A080', 'A-Light':'#A0D4B8',
+  'Sun Music':'#F4A460', 'アソビシステム':'#DDA0DD',
+};
+
+// 2025 box销量数据
+const SALES_2025 = {
+  '40岁前想做的10件事': 12245,
+  '修学旅行时被分进了合不来的组': 6101,
+  '疗伤游戏': 3410,
+  '杀死你的旅程': 2124,
+  '相逢骤雨中': 1295,
+  'if世界开始恋爱': 1142,
+  '朋克三角': 899,
+  '春风物语': 573,
+  '恋爱的正确标记法': 564,
+  '失焦的深度': 476,
+  '雨过天晴的我们': 184,
+};
+
 const ACTORS = [
-  {name:"武田航平",works:[{title:"经典杯子蛋糕",date:"2022/6/13",role:"受"},{title:"烟蓝雨后晴",date:"2026/4/6",role:"受"}]},
-  {name:"沢村玲",works:[{title:"幸福终末",date:"2024/9/2",role:"攻"},{title:"家庭教师岸骑士",date:"2026/1/5",role:"攻"}]},
-  {name:"田中洸希",works:[{title:"甜蜜喂食生活",date:"2024/8/4",role:"受"},{title:"家庭教师岸骑士",date:"2026/1/5",role:"受"}]},
-  {name:"佐藤友祐",works:[{title:"只能亲吻不幸同学了",date:"2022/4/21",role:"攻"},{title:"伪装的真实之吻",date:"2026",role:"受"}]},
-  {name:"佐藤留雅",works:[{title:"有他在的生活",date:"2024/4/11",role:"攻"},{title:"疗伤游戏",date:"2025/10/29",role:"攻"}]},
-  {name:"山中柔太朗",works:[{title:"糖果色的恋爱反论",date:"2022/12/15",role:"攻"},{title:"纯爱上等",date:"2026/2/13",role:"攻"}]},
-  {name:"高松aloha",works:[{title:"四月的东京",date:"2023/6/15",role:"受"},{title:"纯爱上等",date:"2026/2/13",role:"受"}]},
-  {name:"简秀吉",works:[{title:"我很喜欢你，那你呢",date:"2024/1/11",role:"攻"},{title:"修学旅行时被分进了合不来的组",date:"2025/10/18",role:"攻"}]},
-  {name:"藤本光太",works:[{title:"仿佛清新气息",date:"2024/9/19",role:"攻"},{title:"修学旅行时被分进了合不来的组",date:"2025/10/18",role:"受"}]},
-  {name:"奥野壮",works:[{title:"我很喜欢你，那你呢",date:"2024/1/11",role:"受"},{title:"美妆搭档情人",date:"2024/8/6",role:"受"}]},
-  {name:"阿久津仁爱",works:[{title:"around 1/4",date:"2023/7/8",role:"攻"},{title:"成了BL剧的主演",date:"2023/12/24",role:"受"}]},
-  {name:"松冈广大",works:[{title:"超红同人作家猫屋敷想被认同而闹别扭",date:"2022/10/3",role:"受"},{title:"around 1/4",date:"2023/7/8",role:"受"}]},
-  {name:"濑户利树",works:[{title:"前辈，这不叫恋爱",date:"2022/6/16",role:"受"},{title:"我们那微不足道的落幕",date:"2023/1/30",role:"受"}]},
-  {name:"伊藤明日阳",works:[{title:"绝对会变成BL的世界VS绝不想变成BL的男人",date:"2021/3/27",role:"受"},{title:"相逢骤雨中",date:"2025/1/9",role:"受"}]},
-  {name:"古川雄辉",works:[{title:"在回家之后重新开始",date:"2020/9/4",role:"攻"},{title:"我与丈夫及丈夫的男友",date:"2023/3/28",role:"攻"}]},
-  {name:"井上想良",works:[{title:"永远的昨日",date:"2022/10/20",role:"受"},{title:"对比的我和你",date:"2026/3/13",role:"攻"}]},
-  {name:"多和田任益",works:[{title:"向阳之处必有声（电影）",date:"2017/6/24",role:"攻"},{title:"甜蜜喂食生活",date:"2024/8/4",role:"攻"}]},
-  {name:"长谷川慎",works:[{title:"主人公",date:"2019/9/2",role:"攻"},{title:"第二次恋爱才完美",date:"2024/3/5",role:"受"}]},
-  {name:"金子隼也",works:[{title:"完美求婚",date:"2024/2/2",role:"受"},{title:"把老师染成我的颜色",date:"2024/12/26",role:"受"}]},
-  {name:"中川大辅",works:[{title:"胜于言语",date:"2022/9/16",role:"攻"},{title:"在如果的世界里开始恋爱",date:"2025/11/20",role:"攻"}]},
-  {name:"水泽林太郎",works:[{title:"只想看着你",date:"2022/6/17",role:"攻"},{title:"奉上美味离婚",date:"2025/10/1",role:"?"}]},
-  {name:"仓悠贵",works:[{title:"他没有恋爱打算 his",date:"2019/4/8",role:"受"},{title:"只想看着你",date:"2022/6/17",role:"受"}]},
-  {name:"町田启太",works:[{title:"到了30岁还是处男，似乎会变成魔法师",date:"2020/10/8",role:"攻"},{title:"10DANCE",date:"2025/12/18",role:"?"}]},
-  {name:"岩濑洋志",works:[{title:"如宝物般的玻璃珠",date:"2024/7/1",role:"攻"},{title:"北君可爱到难以招架，只好三人共享了",date:"2025/7/1",role:"攻"}]},
-  {name:"增子敦贵",works:[{title:"休感预报",date:"2023/8/11",role:"受"},{title:"北君可爱到难以招架，只好三人共享了",date:"2025/7/1",role:"受"}]},
-  {name:"曾田陵介",works:[{title:"只能亲吻不幸同学了",date:"2022/4/21",role:"受"},{title:"太过耀眼的职场二人",date:"2022/11/4",role:"受"}]},
-  {name:"稻叶友",works:[{title:"唱出恋爱的苦恼",date:"2022/5/27",role:"受"},{title:"恋恋洗衣店",date:"2022/6/29",role:"受"}]},
-  {name:"八神庆仁郎",works:[{title:"那个阴沉的家伙竟成了我的继兄",date:"2024/12/3",role:"受"},{title:"明明我很受欢迎，却只对那家伙心动，还被他宠上了天",date:"2025/12/19",role:"受"}]}
+  // 原有演员
+  {name:"武田航平", agency:"", works:[{title:"经典杯子蛋糕",date:"2022/6/13",role:"受"},{title:"烟蓝雨后晴",date:"2026/4/6",role:"受"}]},
+  {name:"沢村玲", agency:"ebidan", sub:"one n' only", works:[{title:"幸福终末",date:"2024/9/2",role:"攻"},{title:"家庭教师岸骑士",date:"2026/1/5",role:"攻"}]},
+  {name:"田中洸希", agency:"ebidan", sub:"superdragon", works:[{title:"甜蜜喂食生活",date:"2024/8/4",role:"受"},{title:"家庭教师岸骑士",date:"2026/1/5",role:"受"}]},
+  {name:"佐藤友祐", agency:"", works:[{title:"只能亲吻不幸同学了",date:"2022/4/21",role:"攻"},{title:"伪装的真实之吻",date:"2026",role:"受"}]},
+  {name:"佐藤留雅", agency:"", works:[{title:"有他在的生活",date:"2024/4/11",role:"攻"},{title:"疗伤游戏",date:"2025/10/29",role:"攻"}]},
+  {name:"山中柔太朗", agency:"ebidan", sub:"m!lk", works:[{title:"糖果色的恋爱反论",date:"2022/12/15",role:"攻"},{title:"纯爱上等",date:"2026/2/13",role:"攻"}]},
+  {name:"高松aloha", agency:"", works:[{title:"四月的东京",date:"2023/6/15",role:"受"},{title:"纯爱上等",date:"2026/2/13",role:"受"}]},
+  {name:"简秀吉", agency:"MR8", works:[{title:"我很喜欢你，那你呢",date:"2024/1/11",role:"攻"},{title:"修学旅行时被分进了合不来的组",date:"2025/10/18",role:"攻"}]},
+  {name:"藤本光太", agency:"TopCoat", works:[{title:"仿佛清新气息",date:"2024/9/19",role:"攻"},{title:"修学旅行时被分进了合不来的组",date:"2025/10/18",role:"受"}]},
+  {name:"奥野壮", agency:"オスカー", works:[{title:"我很喜欢你，那你呢",date:"2024/1/11",role:"受"},{title:"美妆搭档情人",date:"2024/8/6",role:"受"}]},
+  {name:"阿久津仁爱", agency:"", works:[{title:"around 1/4",date:"2023/7/8",role:"攻"},{title:"成了BL剧的主演",date:"2023/12/24",role:"受"}]},
+  {name:"松冈广大", agency:"アミューズ", works:[{title:"超红同人作家猫屋敷想被认同而闹别扭",date:"2022/10/3",role:"受"},{title:"around 1/4",date:"2023/7/8",role:"受"}]},
+  {name:"濑户利树", agency:"", works:[{title:"前辈，这不叫恋爱",date:"2022/6/16",role:"受"},{title:"我们那微不足道的落幕",date:"2023/1/30",role:"受"}]},
+  {name:"伊藤明日阳", agency:"研音", works:[{title:"绝对会变成BL的世界VS绝不想变成BL的男人",date:"2021/3/27",role:"受"},{title:"相逢骤雨中",date:"2025/1/9",role:"受"}]},
+  {name:"古川雄辉", agency:"", works:[{title:"在回家之后重新开始",date:"2020/9/4",role:"攻"},{title:"我与丈夫及丈夫的男友",date:"2023/3/28",role:"攻"}]},
+  {name:"井上想良", agency:"渡辺", works:[{title:"永远的昨日",date:"2022/10/20",role:"受"},{title:"对比的我和你",date:"2026/3/13",role:"攻"}]},
+  {name:"多和田任益", agency:"", works:[{title:"向阳之处必有声（电影）",date:"2017/6/24",role:"攻"},{title:"甜蜜喂食生活",date:"2024/8/4",role:"攻"}]},
+  {name:"长谷川慎", agency:"", works:[{title:"主人公",date:"2019/9/2",role:"攻"},{title:"第二次恋爱才完美",date:"2024/3/5",role:"受"}]},
+  {name:"金子隼也", agency:"", works:[{title:"完美求婚",date:"2024/2/2",role:"受"},{title:"把老师染成我的颜色",date:"2024/12/26",role:"受"}]},
+  {name:"中川大辅", agency:"研音", works:[{title:"胜于言语",date:"2022/9/16",role:"攻"},{title:"if世界开始恋爱",date:"2025/11/20",role:"攻"}]},
+  {name:"水泽林太郎", agency:"", works:[{title:"只想看着你",date:"2022/6/17",role:"攻"},{title:"奉上美味离婚",date:"2025/10/1",role:"?"}]},
+  {name:"仓悠贵", agency:"", works:[{title:"他没有恋爱打算 his",date:"2019/4/8",role:"受"},{title:"只想看着你",date:"2022/6/17",role:"受"}]},
+  {name:"町田启太", agency:"LDH", works:[{title:"到了30岁还是处男，似乎会变成魔法师",date:"2020/10/8",role:"攻"},{title:"10DANCE",date:"2025/12/18",role:"?"}]},
+  {name:"岩濑洋志", agency:"", works:[{title:"如宝物般的玻璃珠",date:"2024/7/1",role:"攻"},{title:"北君可爱到难以招架，只好三人共享了",date:"2025/7/1",role:"攻"}]},
+  {name:"增子敦贵", agency:"", works:[{title:"休感预报",date:"2023/8/11",role:"受"},{title:"北君可爱到难以招架，只好三人共享了",date:"2025/7/1",role:"受"}]},
+  {name:"曾田陵介", agency:"", works:[{title:"只能亲吻不幸同学了",date:"2022/4/21",role:"受"},{title:"太过耀眼的职场二人",date:"2022/11/4",role:"受"}]},
+  {name:"稻叶友", agency:"", works:[{title:"唱出恋爱的苦恼",date:"2022/5/27",role:"受"},{title:"恋恋洗衣店",date:"2022/6/29",role:"受"}]},
+  {name:"八神庆仁郎", agency:"", works:[{title:"那个阴沉的家伙竟成了我的继兄",date:"2024/12/3",role:"受"},{title:"明明我很受欢迎，却只对那家伙心动，还被他宠上了天",date:"2025/12/19",role:"受"}]},
+  // 2025销量榜新增演员
+  {name:"庄司浩平", agency:"オスカー", works:[{title:"40岁前想做的10件事",date:"2025/1",role:"攻"}]},
+  {name:"风间俊介", agency:"ジャニーズ系", works:[{title:"40岁前想做的10件事",date:"2025/1",role:"受"}]},
+  {name:"武藤润", agency:"ebidan", sub:"原自分", works:[{title:"相逢骤雨中",date:"2025/1/9",role:"攻"}]},
+  {name:"醍醐虎汰朗", agency:"A-Light", works:[{title:"if世界开始恋爱",date:"2025/11/20",role:"受"}]},
+  {name:"和田雅成", agency:"", works:[{title:"杀死你的旅程",date:"2025/9/26",role:"攻"}]},
+  {name:"高桥大翔", agency:"", works:[{title:"杀死你的旅程",date:"2025/9/26",role:"受"}]},
+  {name:"长野凌大", agency:"", works:[{title:"朋克三角",date:"2025/10/9",role:"攻"}]},
+  {name:"藤林泰也", agency:"", works:[{title:"朋克三角",date:"2025/10/9",role:"受"}]},
+  {name:"加藤大悟", agency:"渡辺", works:[{title:"春风物语",date:"2025",role:"攻"}]},
+  {name:"塩崎太智", agency:"ebidan", sub:"m!lk", works:[{title:"春风物语",date:"2025",role:"受"}]},
+  {name:"岩桥玄树", agency:"", works:[{title:"恋爱的正确标记法",date:"2025",role:"攻"}]},
+  {name:"相马理", agency:"", works:[{title:"恋爱的正确标记法",date:"2025",role:"受"}]},
+  {name:"平野宏周", agency:"Sun Music", works:[{title:"失焦的深度",date:"2025",role:"攻"}]},
+  {name:"宇佐卓真", agency:"アソビシステム", works:[{title:"失焦的深度",date:"2025",role:"受"}]},
+  {name:"堀夏喜", agency:"LDH", sub:"FANTASTICS", works:[{title:"雨过天晴的我们",date:"2025",role:"攻"}]},
+  {name:"池田匡志", agency:"", works:[{title:"雨过天晴的我们",date:"2025",role:"受"}]},
 ];
 
-// 计算每个演员的综合属性
-function getOverallRole(actor) {
-  const roles = actor.works.map(w => w.role);
-  const hasAttack = roles.includes('攻');
-  const hasReceive = roles.includes('受');
-  if (hasAttack && hasReceive) return '两栖';
-  if (hasAttack) return '攻';
-  if (hasReceive) return '受';
-  return '未知';
+function getRole(a) {
+  const rs = a.works.map(w=>w.role);
+  const atk = rs.includes('攻'), rec = rs.includes('受');
+  if(atk&&rec) return '两栖'; if(atk) return '攻'; if(rec) return '受'; return '未知';
 }
 
-const ROLE_COLOR = {
-  '攻': '#E8455A',
-  '受': '#3B82C4',
-  '两栖': '#8B5CF6',
-  '未知': '#9CA3AF'
-};
+// 共演map
+const costarMap = {};
+ACTORS.forEach(a => { costarMap[a.name] = new Set(); });
+const allDramas = {};
+ACTORS.forEach(a => a.works.forEach(w => {
+  if(!allDramas[w.title]) allDramas[w.title] = [];
+  allDramas[w.title].push(a.name);
+}));
+Object.values(allDramas).forEach(actors => {
+  actors.forEach((a,i) => actors.forEach((b,j) => { if(i!==j) costarMap[a].add(b); }));
+});
 
-const ROLE_FILL = {
-  '攻': '#fde8eb',
-  '受': '#e8f0fb',
-  '两栖': '#f0ebff',
-  '未知': '#f3f4f6'
-};
+// 事务所map
+const agencyMap = {};
+ACTORS.forEach(a => {
+  if(a.agency) {
+    if(!agencyMap[a.agency]) agencyMap[a.agency] = [];
+    agencyMap[a.agency].push(a.name);
+  }
+});
 
-// 构建共演关系
-function buildGraph() {
-  const nodes = ACTORS.map(a => ({
-    id: a.name,
-    role: getOverallRole(a),
-    works: a.works
+let curFilter = '全部';
+const svgEl = document.getElementById('svg');
+const svg = d3.select(svgEl);
+const g = svg.append('g');
+svg.call(d3.zoom().scaleExtent([0.15,4]).on('zoom', e => g.attr('transform', e.transform)));
+svg.on('click', () => { closeDetail(); clearHL(); });
+const bubbleG = g.append('g');
+const linkG = g.append('g');
+const nodeG = g.append('g');
+let simulation, linkSel, nodeSel;
+
+function W() { return svgEl.clientWidth; }
+function H() { return svgEl.clientHeight; }
+
+function buildLinks(filter) {
+  const links = [], seen = new Set();
+  Object.entries(allDramas).forEach(([title, actors]) => {
+    const valid = actors.filter(n => { const a = ACTORS.find(x=>x.name===n); return a && (filter==='全部'||getRole(a)===filter); });
+    for(let i=0;i<valid.length;i++) for(let j=i+1;j<valid.length;j++) {
+      const key = [valid[i],valid[j]].sort().join('|||');
+      if(!seen.has(key)) { seen.add(key); links.push({source:valid[i],target:valid[j],title}); }
+    }
+  });
+  return links;
+}
+
+function agencyForce(nodes, strength) {
+  return function(alpha) {
+    Object.entries(agencyMap).forEach(([agency, names]) => {
+      const group = nodes.filter(n => names.includes(n.id));
+      if(group.length < 2) return;
+      const cx = d3.mean(group, d=>d.x), cy = d3.mean(group, d=>d.y);
+      group.forEach(d => { d.vx += (cx-d.x)*strength*alpha; d.vy += (cy-d.y)*strength*alpha; });
+    });
+  };
+}
+
+function drawBubbles(nodes) {
+  bubbleG.selectAll('*').remove();
+  Object.entries(agencyMap).forEach(([agency, names]) => {
+    const group = nodes.filter(n => names.includes(n.id));
+    if(!group.length) return;
+    const color = AGENCY_COLORS[agency] || '#aaa';
+    if(group.length === 1) {
+      const d = group[0];
+      bubbleG.append('circle').attr('cx',d.x).attr('cy',d.y).attr('r',38).attr('fill',color).attr('class','bubble');
+      bubbleG.append('text').attr('x',d.x).attr('y',d.y-42).attr('text-anchor','middle').attr('class','bubble-label').attr('fill',color).text(agency);
+    } else {
+      const xs=group.map(d=>d.x), ys=group.map(d=>d.y);
+      const cx=d3.mean(xs), cy=d3.mean(ys);
+      const rx=Math.max(55,(d3.max(xs)-d3.min(xs))/2+50), ry=Math.max(55,(d3.max(ys)-d3.min(ys))/2+50);
+      bubbleG.append('ellipse').attr('cx',cx).attr('cy',cy).attr('rx',rx).attr('ry',ry).attr('fill',color).attr('class','bubble');
+      bubbleG.append('text').attr('x',cx).attr('y',cy-ry-8).attr('text-anchor','middle').attr('class','bubble-label').attr('fill',color).text(`${agency} (${group.length})`);
+    }
+  });
+}
+
+function init() {
+  const actors = ACTORS.filter(a => curFilter==='全部'||getRole(a)===curFilter);
+  const links = buildLinks(curFilter);
+  const nodes = actors.map(a => ({
+    id:a.name, role:getRole(a), agency:a.agency||'', sub:a.sub||'', works:a.works,
+    x: W()/2+(Math.random()-.5)*300, y: H()/2+(Math.random()-.5)*300
   }));
+  if(simulation) simulation.stop();
+  simulation = d3.forceSimulation(nodes)
+    .force('link', d3.forceLink(links).id(d=>d.id).distance(120).strength(0.35))
+    .force('charge', d3.forceManyBody().strength(-280))
+    .force('center', d3.forceCenter(W()/2, H()/2))
+    .force('collision', d3.forceCollide(40))
+    .force('agency', agencyForce(nodes, 0.18));
 
-  const dramas = {};
-  ACTORS.forEach(actor => {
-    actor.works.forEach(w => {
-      if (!dramas[w.title]) dramas[w.title] = [];
-      dramas[w.title].push(actor.name);
-    });
+  linkG.selectAll('*').remove();
+  linkSel = linkG.selectAll('line').data(links).join('line').attr('class','link');
+
+  nodeG.selectAll('*').remove();
+  nodeSel = nodeG.selectAll('g').data(nodes).join('g').attr('class','node')
+    .call(d3.drag()
+      .on('start',(e,d)=>{ if(!e.active) simulation.alphaTarget(0.3).restart(); d.fx=d.x; d.fy=d.y; })
+      .on('drag',(e,d)=>{ d.fx=e.x; d.fy=e.y; })
+      .on('end',(e,d)=>{ if(!e.active) simulation.alphaTarget(0); d.fx=null; d.fy=null; })
+    )
+    .on('click',(e,d)=>{ e.stopPropagation(); selectActor(d.id); });
+
+  nodeSel.append('circle').attr('r',18).attr('fill',d=>RB[d.role]).attr('stroke',d=>RC[d.role]);
+  nodeSel.append('text').attr('dy',33).attr('text-anchor','middle').text(d=>d.id);
+
+  simulation.on('tick', () => {
+    linkSel.attr('x1',d=>d.source.x).attr('y1',d=>d.source.y).attr('x2',d=>d.target.x).attr('y2',d=>d.target.y);
+    nodeSel.attr('transform',d=>`translate(${d.x},${d.y})`);
+    drawBubbles(nodes);
   });
-
-  const links = [];
-  const linkSet = new Set();
-  Object.entries(dramas).forEach(([title, actors]) => {
-    for (let i = 0; i < actors.length; i++) {
-      for (let j = i + 1; j < actors.length; j++) {
-        const key = [actors[i], actors[j]].sort().join('|');
-        if (!linkSet.has(key)) {
-          linkSet.add(key);
-          links.push({ source: actors[i], target: actors[j], title });
-        }
-      }
-    }
-  });
-
-  return { nodes, links };
+  renderList();
 }
 
-// 建立共演查找
-function buildCostarMap() {
-  const map = {};
-  ACTORS.forEach(a => { map[a.name] = new Set(); });
-  const dramas = {};
-  ACTORS.forEach(actor => {
-    actor.works.forEach(w => {
-      if (!dramas[w.title]) dramas[w.title] = [];
-      dramas[w.title].push(actor.name);
-    });
-  });
-  Object.values(dramas).forEach(actors => {
-    for (let i = 0; i < actors.length; i++) {
-      for (let j = i + 1; j < actors.length; j++) {
-        map[actors[i]].add(actors[j]);
-        map[actors[j]].add(actors[i]);
-      }
-    }
-  });
-  return map;
-}
+function selectActor(name) {
+  const actor = ACTORS.find(a=>a.name===name);
+  if(!actor) return;
+  const role = getRole(actor);
+  const costars = [...(costarMap[name]||[])];
 
-const { nodes, links } = buildGraph();
-const costarMap = buildCostarMap();
+  document.getElementById('d-name').textContent = name;
+  const tags = document.getElementById('d-tags');
+  tags.innerHTML = `<span class="dtag" style="background:${RB[role]};color:${RC[role]}">${role==='两栖'?'攻受两栖':role}</span>`;
+  if(actor.agency) {
+    const ac = AGENCY_COLORS[actor.agency]||'#aaa';
+    tags.innerHTML += `<span class="dtag" style="background:${ac}22;color:${ac}">${actor.agency}${actor.sub?' · '+actor.sub:''}</span>`;
+  }
 
-// 渲染侧边栏
-function renderSidebar(filter = '') {
-  const list = document.getElementById('actor-list');
-  const filtered = ACTORS.filter(a => a.name.includes(filter));
-  list.innerHTML = filtered.map(a => {
-    const role = getOverallRole(a);
-    return `
-      <div class="actor-item" data-name="${a.name}" onclick="selectActor('${a.name}')">
-        <div class="actor-dot" style="background:${ROLE_COLOR[role]}"></div>
-        <span class="actor-name">${a.name}</span>
-        <span class="actor-tag tag-${role}">${role}</span>
+  // 作品 + 销量
+  document.getElementById('d-works').innerHTML = actor.works.map(w=>{
+    const c = RC[w.role]||'#9CA3AF';
+    const sales = SALES_2025[w.title];
+    const salesBadge = sales ? `<span class="sales-badge">📦 ${sales.toLocaleString()} 本</span>` : '';
+    return `<div class="wcard" style="border-left-color:${c}">
+      <div class="wtitle">${w.title}</div>
+      <div class="wmeta">
+        <span class="wdate">${w.date}</span>
+        <span class="wrtag" style="background:${RB[w.role]||'#f3f4f6'};color:${c}">${w.role}</span>
       </div>
-    `;
+      ${salesBadge}
+    </div>`;
+  }).join('');
+
+  // 共演 + 同事务所
+  let costarHTML = costars.length
+    ? costars.map(c=>`<span class="chip" onclick="selectActor('${c}')">${c}</span>`).join('')
+    : `<span style="font-size:0.7rem;color:var(--muted)">暂无共演记录</span>`;
+  if(actor.agency) {
+    const mates = (agencyMap[actor.agency]||[]).filter(n=>n!==name);
+    if(mates.length) {
+      const ac = AGENCY_COLORS[actor.agency]||'#aaa';
+      costarHTML += `<div style="width:100%;margin-top:6px;font-size:0.62rem;color:var(--muted)">同事务所</div>`
+        + mates.map(c=>`<span class="chip" style="border-color:${ac}66" onclick="selectActor('${c}')">${c}</span>`).join('');
+    }
+  }
+  document.getElementById('d-costars').innerHTML = costarHTML;
+
+  document.getElementById('d-stats').innerHTML = `
+    <div class="stat"><div class="snum">${actor.works.length}</div><div class="slbl">作品数</div></div>
+    <div class="stat"><div class="snum">${costars.length}</div><div class="slbl">共演人数</div></div>
+    <div class="stat"><div class="snum" style="font-size:0.75rem">${actor.agency||'—'}</div><div class="slbl">事务所</div></div>
+  `;
+
+  document.getElementById('detail').classList.add('open');
+  setTimeout(()=>{ if(simulation) simulation.restart(); }, 260);
+  hlActor(name);
+  document.querySelectorAll('.aitem').forEach(el=>el.classList.toggle('on', el.dataset.name===name));
+}
+
+function hlActor(name) {
+  const connected = new Set([name]);
+  linkSel && linkSel.each(d=>{
+    const s=typeof d.source==='object'?d.source.id:d.source, t=typeof d.target==='object'?d.target.id:d.target;
+    if(s===name) connected.add(t); if(t===name) connected.add(s);
+  });
+  nodeSel && nodeSel.classed('dim', d=>!connected.has(d.id));
+  linkSel && linkSel
+    .classed('dim', d=>{ const s=typeof d.source==='object'?d.source.id:d.source, t=typeof d.target==='object'?d.target.id:d.target; return s!==name&&t!==name; })
+    .classed('hl', d=>{ const s=typeof d.source==='object'?d.source.id:d.source, t=typeof d.target==='object'?d.target.id:d.target; return s===name||t===name; });
+}
+
+function clearHL() {
+  nodeSel&&nodeSel.classed('dim',false);
+  linkSel&&linkSel.classed('dim',false).classed('hl',false);
+  document.querySelectorAll('.aitem').forEach(el=>el.classList.remove('on'));
+}
+
+function closeDetail() {
+  document.getElementById('detail').classList.remove('open');
+  clearHL();
+}
+
+function setFilter(f, btn) {
+  curFilter = f;
+  document.querySelectorAll('.fbtn').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+  init(); closeDetail();
+}
+
+function renderList(q='') {
+  const list = document.getElementById('alist');
+  const items = ACTORS.filter(a => (curFilter==='全部'||getRole(a)===curFilter) && a.name.includes(q));
+  list.innerHTML = items.map(a=>{
+    const r = getRole(a);
+    const ac = a.agency ? AGENCY_COLORS[a.agency]||'#aaa' : '';
+    return `<div class="aitem" data-name="${a.name}" onclick="selectActor('${a.name}')">
+      <div class="adot" style="background:${RC[r]}"></div>
+      <div class="aname">${a.name}${a.agency?`<span style="font-size:0.58rem;color:${ac};margin-left:3px">${a.agency}</span>`:''}</div>
+      <span class="abadge" style="background:${RB[r]};color:${RC[r]}">${r}</span>
+    </div>`;
   }).join('');
 }
 
-renderSidebar();
-
-document.getElementById('search-input').addEventListener('input', e => {
-  renderSidebar(e.target.value);
-});
-
-// D3 图
-const svg = d3.select('#graph-svg');
-const width = document.querySelector('.graph-area').offsetWidth;
-const height = document.querySelector('.graph-area').offsetHeight;
-
-const g = svg.append('g');
-
-// zoom
-svg.call(d3.zoom().scaleExtent([0.3, 3]).on('zoom', e => {
-  g.attr('transform', e.transform);
-}));
-
-// 力导向
-const simulation = d3.forceSimulation(nodes)
-  .force('link', d3.forceLink(links).id(d => d.id).distance(120))
-  .force('charge', d3.forceManyBody().strength(-300))
-  .force('center', d3.forceCenter(width / 2, height / 2))
-  .force('collision', d3.forceCollide(40));
-
-// 连线
-const link = g.append('g')
-  .selectAll('line')
-  .data(links)
-  .join('line')
-  .attr('class', 'link');
-
-// 连线标签
-const linkLabel = g.append('g')
-  .selectAll('text')
-  .data(links)
-  .join('text')
-  .attr('class', 'link-label')
-  .text(d => d.title.length > 10 ? d.title.slice(0, 10) + '…' : d.title)
-  .attr('text-anchor', 'middle');
-
-// 节点
-const node = g.append('g')
-  .selectAll('g')
-  .data(nodes)
-  .join('g')
-  .attr('class', 'node')
-  .call(d3.drag()
-    .on('start', (e, d) => { if (!e.active) simulation.alphaTarget(0.3).restart(); d.fx = d.x; d.fy = d.y; })
-    .on('drag', (e, d) => { d.fx = e.x; d.fy = e.y; })
-    .on('end', (e, d) => { if (!e.active) simulation.alphaTarget(0); d.fx = null; d.fy = null; })
-  )
-  .on('click', (e, d) => { e.stopPropagation(); selectActor(d.id); });
-
-node.append('circle')
-  .attr('r', 18)
-  .attr('fill', d => ROLE_FILL[d.role])
-  .attr('stroke', d => ROLE_COLOR[d.role]);
-
-node.append('text')
-  .attr('dy', 35)
-  .attr('text-anchor', 'middle')
-  .text(d => d.id);
-
-simulation.on('tick', () => {
-  link
-    .attr('x1', d => d.source.x)
-    .attr('y1', d => d.source.y)
-    .attr('x2', d => d.target.x)
-    .attr('y2', d => d.target.y);
-
-  linkLabel
-    .attr('x', d => (d.source.x + d.target.x) / 2)
-    .attr('y', d => (d.source.y + d.target.y) / 2);
-
-  node.attr('transform', d => `translate(${d.x},${d.y})`);
-});
-
-svg.on('click', () => {
-  closePanel();
-  clearHighlight();
-});
-
-// 选中演员
-function selectActor(name) {
-  const actor = ACTORS.find(a => a.name === name);
-  if (!actor) return;
-
-  const role = getOverallRole(actor);
-  const costars = [...(costarMap[name] || [])];
-
-  // 信息面板
-  document.getElementById('panel-name').textContent = name;
-  const roleEl = document.getElementById('panel-role');
-  roleEl.textContent = role === '两栖' ? '攻受两栖' : role;
-  roleEl.style.color = ROLE_COLOR[role];
-
-  document.getElementById('panel-works').innerHTML = actor.works.map(w => `
-    <div class="work-item">
-      <div class="work-role-dot" style="background:${ROLE_COLOR[w.role] || '#9CA3AF'}"></div>
-      <div class="work-title">${w.title}</div>
-      <div class="work-date">${w.date}</div>
-    </div>
-  `).join('');
-
-  document.getElementById('panel-costars').innerHTML = costars.length
-    ? costars.map(c => `<span class="costar-chip" onclick="selectActor('${c}')">${c}</span>`).join('')
-    : '<span style="font-size:0.72rem;color:var(--text-muted)">暂无共演记录</span>';
-
-  document.getElementById('info-panel').classList.add('visible');
-
-  // 高亮
-  highlightActor(name);
-
-  // 侧边栏高亮
-  document.querySelectorAll('.actor-item').forEach(el => {
-    el.classList.toggle('active', el.dataset.name === name);
-  });
-}
-
-function highlightActor(name) {
-  const connected = new Set([name]);
-  links.forEach(l => {
-    const s = typeof l.source === 'object' ? l.source.id : l.source;
-    const t = typeof l.target === 'object' ? l.target.id : l.target;
-    if (s === name) connected.add(t);
-    if (t === name) connected.add(s);
-  });
-
-  node.classed('dimmed', d => !connected.has(d.id));
-  link.classed('dimmed', d => {
-    const s = typeof d.source === 'object' ? d.source.id : d.source;
-    const t = typeof d.target === 'object' ? d.target.id : d.target;
-    return s !== name && t !== name;
-  });
-  link.classed('highlighted', d => {
-    const s = typeof d.source === 'object' ? d.source.id : d.source;
-    const t = typeof d.target === 'object' ? d.target.id : d.target;
-    return s === name || t === name;
-  });
-  linkLabel.attr('opacity', d => {
-    const s = typeof d.source === 'object' ? d.source.id : d.source;
-    const t = typeof d.target === 'object' ? d.target.id : d.target;
-    return (s === name || t === name) ? 1 : 0;
-  });
-}
-
-function clearHighlight() {
-  node.classed('dimmed', false);
-  link.classed('dimmed', false).classed('highlighted', false);
-  linkLabel.attr('opacity', 0);
-  document.querySelectorAll('.actor-item').forEach(el => el.classList.remove('active'));
-}
-
-function closePanel() {
-  document.getElementById('info-panel').classList.remove('visible');
-  clearHighlight();
-}
+window.addEventListener('resize', ()=>{ if(simulation) simulation.restart(); });
+init();
 </script>
-</body>
-</html>
+
+
+</body></html>
