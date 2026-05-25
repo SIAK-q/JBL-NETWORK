@@ -1,9 +1,11 @@
-<html lang="zh"><head>
+<!DOCTYPE html>
+<html lang="zh">
+<head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>日腐人二下 · 演员关系图鉴</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
-<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@300;400;600&amp;family=Noto+Sans+JP:wght@300;400;500&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@300;400;600&family=Noto+Sans+JP:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 :root {
@@ -158,9 +160,9 @@ svg { width: 100%; height: 100%; }
 </head>
 <body>
 
-<div class="loading-screen hidden" id="loading">
+<div class="loading-screen" id="loading">
   <div class="loading-spinner"></div>
-  <div class="loading-text">⚠️ 请通过 GitHub Pages 访问以加载数据</div>
+  <div class="loading-text">加载数据中...</div>
 </div>
 
 <header>
@@ -184,7 +186,7 @@ svg { width: 100%; height: 100%; }
       <button class="mode-btn" id="mode-list" onclick="setMode('list')">📋 列表</button>
       <button class="mode-btn on" id="mode-graph" onclick="setMode('graph')">🕸 图谱</button>
     </div>
-    <button class="publish-btn loading" id="publish-btn" onclick="publishToGitHub()">发布中...</button>
+    <button class="publish-btn" id="publish-btn" onclick="publishToGitHub()">↑ 发布到 GitHub</button>
   </div>
 </header>
 
@@ -206,23 +208,23 @@ svg { width: 100%; height: 100%; }
       <div class="add-form" id="add-form">
         <div class="form-row">
           <div class="form-label">演员名 <span style="color:#E24B4A">*</span></div>
-          <input class="form-input" id="f-name" placeholder="例：田中洸希">
+          <input class="form-input" id="f-name" placeholder="例：田中洸希" />
         </div>
         <div class="form-row">
           <div class="form-label">事务所 <span class="opt">选填</span></div>
-          <input class="form-input" id="f-agency" placeholder="例：ebidan">
+          <input class="form-input" id="f-agency" placeholder="例：ebidan" />
         </div>
         <div class="form-row">
           <div class="form-label">子团体 <span class="opt">选填</span></div>
-          <input class="form-input" id="f-sub" placeholder="例：superdragon">
+          <input class="form-input" id="f-sub" placeholder="例：superdragon" />
         </div>
         <div class="form-row">
           <div class="form-label">作品名 <span style="color:#E24B4A">*</span></div>
-          <input class="form-input" id="f-title" placeholder="例：甜蜜喂食生活">
+          <input class="form-input" id="f-title" placeholder="例：甜蜜喂食生活" />
         </div>
         <div class="form-row">
           <div class="form-label">上映日期 <span class="opt">选填</span></div>
-          <input class="form-input" id="f-date" placeholder="例：2024/8/4">
+          <input class="form-input" id="f-date" placeholder="例：2024/8/4" />
         </div>
         <div class="form-row">
           <div class="form-label">角色 <span style="color:#E24B4A">*</span></div>
@@ -238,7 +240,7 @@ svg { width: 100%; height: 100%; }
     </div>
   </div>
   <div class="graph">
-    <svg id="svg"><g><g></g><g></g><g></g></g></svg>
+    <svg id="svg"></svg>
     <div class="hint">滚轮缩放 · 拖拽节点 · 点击查看详情</div>
   </div>
   <div class="detail" id="detail">
@@ -734,6 +736,5 @@ async function saveActor() {
   document.getElementById('loading').classList.add('hidden');
 })();
 </script>
-
-
-</body></html>
+</body>
+</html>
