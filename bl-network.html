@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>日腐人二下 · 演员关系图鉴</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@300;400;600&family=Noto+Sans+JP:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --red: #E8455A;
+    --red-light: #fde8eb;
+    --blue: #3B82C4;
+    --blue-light: #e8f0fb;
+    --purple: #8B5CF6;
+    --purple-light: #f0ebff;
+    --gray: #6B7280;
+    --bg: #FAFAF8;
+    --surface: #FFFFFF;
+    --border: #E8E4DF;
+    --text: #1a1a1a;
+    --text-muted: #888;
+    --link: #D4A5A5;
+  }
+
+  body {
+    font-family: 'Noto Sans JP', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Header */
+  header {
+    padding: 2rem 2.5rem 1.5rem;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+
+  .header-left h1 {
+    font-family: 'Noto Serif JP', serif;
+    font-size: 1.6rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    color: var(--text);
+    line-height: 1.2;
+  }
+
+  .header-left p {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    margin-top: 0.3rem;
+    font-weight: 300;
+    letter-spacing: 0.03em;
+  }
+
+  .legend {
+    display: flex;
+    gap: 1.2rem;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+  }
+
+  .legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  /* Layout */
+  .layout {
+    display: flex;
+    height: calc(100vh - 85px);
+  }
+
+  /* Sidebar */
+  .sidebar {
+    width: 280px;
+    flex-shrink: 0;
+    border-right: 1px solid var(--border);
+    background: var(--surface);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .sidebar-search {
+    padding: 1rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .sidebar-search input {
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-family: 'Noto Sans JP', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .sidebar-search input:focus {
+    border-color: var(--link);
+  }
+
+  .actor-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0.5rem 0;
+  }
+
+  .actor-list::-webkit-scrollbar { width: 4px; }
+  .actor-list::-webkit-scrollbar-track { background: transparent; }
+  .actor-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  .actor-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0.6rem 1rem;
+    cursor: pointer;
+    transition: background 0.15s;
+    border-radius: 0;
+  }
+
+  .actor-item:hover { background: var(--bg); }
+  .actor-item.active { background: #fdf5f5; }
+
+  .actor-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .actor-name {
+    font-size: 0.82rem;
+    font-weight: 400;
+    color: var(--text);
+    flex: 1;
+  }
+
+  .actor-tag {
+    font-size: 0.68rem;
+    padding: 1px 6px;
+    border-radius: 3px;
+    font-weight: 500;
+  }
+
+  .tag-攻 { background: var(--red-light); color: var(--red); }
+  .tag-受 { background: var(--blue-light); color: var(--blue); }
+  .tag-两栖 { background: var(--purple-light); color: var(--purple); }
+  .tag-未知 { background: #f3f4f6; color: var(--gray); }
+
+  /* Graph area */
+  .graph-area {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+  }
+
+  #graph-svg {
+    width: 100%;
+    height: 100%;
+  }
+
+  /* Info panel */
+  .info-panel {
+    position: absolute;
+    top: 1.5rem;
+    right: 1.5rem;
+    width: 260px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1.25rem;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+    opacity: 0;
+    transform: translateY(8px);
+    transition: all 0.25s ease;
+    pointer-events: none;
+  }
+
+  .info-panel.visible {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+  }
+
+  .info-panel-name {
+    font-family: 'Noto Serif JP', serif;
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+    color: var(--text);
+  }
+
+  .info-panel-role {
+    font-size: 0.72rem;
+    margin-bottom: 1rem;
+    font-weight: 500;
+  }
+
+  .info-section-title {
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-muted);
+    margin-bottom: 0.5rem;
+    margin-top: 0.75rem;
+  }
+
+  .work-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 0.4rem 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.76rem;
+  }
+
+  .work-item:last-child { border-bottom: none; }
+
+  .work-role-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    margin-top: 5px;
+    flex-shrink: 0;
+  }
+
+  .work-title {
+    flex: 1;
+    color: var(--text);
+    line-height: 1.4;
+  }
+
+  .work-date {
+    color: var(--text-muted);
+    font-size: 0.68rem;
+    white-space: nowrap;
+  }
+
+  .costar-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin-top: 0.25rem;
+  }
+
+  .costar-chip {
+    font-size: 0.7rem;
+    padding: 2px 8px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.15s;
+    background: var(--bg);
+  }
+
+  .costar-chip:hover {
+    border-color: var(--link);
+    color: var(--text);
+  }
+
+  .close-btn {
+    position: absolute;
+    top: 0.75rem;
+    right: 0.75rem;
+    width: 20px;
+    height: 20px;
+    border: none;
+    background: none;
+    cursor: pointer;
+    color: var(--text-muted);
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    transition: background 0.15s;
+  }
+
+  .close-btn:hover { background: var(--bg); }
+
+  /* Hint */
+  .hint {
+    position: absolute;
+    bottom: 1.5rem;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    background: rgba(255,255,255,0.9);
+    padding: 0.4rem 1rem;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    pointer-events: none;
+    white-space: nowrap;
+  }
+
+  /* D3 styles */
+  .node circle {
+    stroke-width: 2;
+    cursor: pointer;
+    transition: r 0.2s;
+  }
+
+  .node text {
+    font-family: 'Noto Sans JP', sans-serif;
+    font-size: 11px;
+    pointer-events: none;
+    fill: #333;
+  }
+
+  .link {
+    stroke: #ddd;
+    stroke-width: 1.5;
+    fill: none;
+  }
+
+  .link.highlighted {
+    stroke: #D4A5A5;
+    stroke-width: 2.5;
+  }
+
+  .link-label {
+    font-family: 'Noto Sans JP', sans-serif;
+    font-size: 9px;
+    fill: #aaa;
+    pointer-events: none;
+  }
+
+  .node.dimmed circle { opacity: 0.2; }
+  .node.dimmed text { opacity: 0.2; }
+  .link.dimmed { opacity: 0.05; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-left">
+    <h1>日腐人二下 · 演员关系图鉴</h1>
+    <p>数据来源：社区整理（统计至 2026/3） · 点击演员节点查看详情 · 连线代表共演关系</p>
+  </div>
+  <div class="legend">
+    <div class="legend-item">
+      <div class="legend-dot" style="background:#E8455A"></div>
+      <span>攻</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-dot" style="background:#3B82C4"></div>
+      <span>受</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-dot" style="background:#8B5CF6"></div>
+      <span>攻受两栖</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-dot" style="background:#9CA3AF"></div>
+      <span>未知</span>
+    </div>
+  </div>
+</header>
+
+<div class="layout">
+  <div class="sidebar">
+    <div class="sidebar-search">
+      <input type="text" id="search-input" placeholder="搜索演员名..." />
+    </div>
+    <div class="actor-list" id="actor-list"></div>
+  </div>
+
+  <div class="graph-area">
+    <svg id="graph-svg"></svg>
+    <div class="info-panel" id="info-panel">
+      <button class="close-btn" onclick="closePanel()">✕</button>
+      <div class="info-panel-name" id="panel-name"></div>
+      <div class="info-panel-role" id="panel-role"></div>
+      <div class="info-section-title">出演作品</div>
+      <div id="panel-works"></div>
+      <div class="info-section-title">共演过</div>
+      <div class="costar-list" id="panel-costars"></div>
+    </div>
+    <div class="hint">滚轮缩放 · 拖拽移动 · 点击演员查看详情</div>
+  </div>
+</div>
+
+<script>
+const ACTORS = [
+  {name:"武田航平",works:[{title:"经典杯子蛋糕",date:"2022/6/13",role:"受"},{title:"烟蓝雨后晴",date:"2026/4/6",role:"受"}]},
+  {name:"沢村玲",works:[{title:"幸福终末",date:"2024/9/2",role:"攻"},{title:"家庭教师岸骑士",date:"2026/1/5",role:"攻"}]},
+  {name:"田中洸希",works:[{title:"甜蜜喂食生活",date:"2024/8/4",role:"受"},{title:"家庭教师岸骑士",date:"2026/1/5",role:"受"}]},
+  {name:"佐藤友祐",works:[{title:"只能亲吻不幸同学了",date:"2022/4/21",role:"攻"},{title:"伪装的真实之吻",date:"2026",role:"受"}]},
+  {name:"佐藤留雅",works:[{title:"有他在的生活",date:"2024/4/11",role:"攻"},{title:"疗伤游戏",date:"2025/10/29",role:"攻"}]},
+  {name:"山中柔太朗",works:[{title:"糖果色的恋爱反论",date:"2022/12/15",role:"攻"},{title:"纯爱上等",date:"2026/2/13",role:"攻"}]},
+  {name:"高松aloha",works:[{title:"四月的东京",date:"2023/6/15",role:"受"},{title:"纯爱上等",date:"2026/2/13",role:"受"}]},
+  {name:"简秀吉",works:[{title:"我很喜欢你，那你呢",date:"2024/1/11",role:"攻"},{title:"修学旅行时被分进了合不来的组",date:"2025/10/18",role:"攻"}]},
+  {name:"藤本光太",works:[{title:"仿佛清新气息",date:"2024/9/19",role:"攻"},{title:"修学旅行时被分进了合不来的组",date:"2025/10/18",role:"受"}]},
+  {name:"奥野壮",works:[{title:"我很喜欢你，那你呢",date:"2024/1/11",role:"受"},{title:"美妆搭档情人",date:"2024/8/6",role:"受"}]},
+  {name:"阿久津仁爱",works:[{title:"around 1/4",date:"2023/7/8",role:"攻"},{title:"成了BL剧的主演",date:"2023/12/24",role:"受"}]},
+  {name:"松冈广大",works:[{title:"超红同人作家猫屋敷想被认同而闹别扭",date:"2022/10/3",role:"受"},{title:"around 1/4",date:"2023/7/8",role:"受"}]},
+  {name:"濑户利树",works:[{title:"前辈，这不叫恋爱",date:"2022/6/16",role:"受"},{title:"我们那微不足道的落幕",date:"2023/1/30",role:"受"}]},
+  {name:"伊藤明日阳",works:[{title:"绝对会变成BL的世界VS绝不想变成BL的男人",date:"2021/3/27",role:"受"},{title:"相逢骤雨中",date:"2025/1/9",role:"受"}]},
+  {name:"古川雄辉",works:[{title:"在回家之后重新开始",date:"2020/9/4",role:"攻"},{title:"我与丈夫及丈夫的男友",date:"2023/3/28",role:"攻"}]},
+  {name:"井上想良",works:[{title:"永远的昨日",date:"2022/10/20",role:"受"},{title:"对比的我和你",date:"2026/3/13",role:"攻"}]},
+  {name:"多和田任益",works:[{title:"向阳之处必有声（电影）",date:"2017/6/24",role:"攻"},{title:"甜蜜喂食生活",date:"2024/8/4",role:"攻"}]},
+  {name:"长谷川慎",works:[{title:"主人公",date:"2019/9/2",role:"攻"},{title:"第二次恋爱才完美",date:"2024/3/5",role:"受"}]},
+  {name:"金子隼也",works:[{title:"完美求婚",date:"2024/2/2",role:"受"},{title:"把老师染成我的颜色",date:"2024/12/26",role:"受"}]},
+  {name:"中川大辅",works:[{title:"胜于言语",date:"2022/9/16",role:"攻"},{title:"在如果的世界里开始恋爱",date:"2025/11/20",role:"攻"}]},
+  {name:"水泽林太郎",works:[{title:"只想看着你",date:"2022/6/17",role:"攻"},{title:"奉上美味离婚",date:"2025/10/1",role:"?"}]},
+  {name:"仓悠贵",works:[{title:"他没有恋爱打算 his",date:"2019/4/8",role:"受"},{title:"只想看着你",date:"2022/6/17",role:"受"}]},
+  {name:"町田启太",works:[{title:"到了30岁还是处男，似乎会变成魔法师",date:"2020/10/8",role:"攻"},{title:"10DANCE",date:"2025/12/18",role:"?"}]},
+  {name:"岩濑洋志",works:[{title:"如宝物般的玻璃珠",date:"2024/7/1",role:"攻"},{title:"北君可爱到难以招架，只好三人共享了",date:"2025/7/1",role:"攻"}]},
+  {name:"增子敦贵",works:[{title:"休感预报",date:"2023/8/11",role:"受"},{title:"北君可爱到难以招架，只好三人共享了",date:"2025/7/1",role:"受"}]},
+  {name:"曾田陵介",works:[{title:"只能亲吻不幸同学了",date:"2022/4/21",role:"受"},{title:"太过耀眼的职场二人",date:"2022/11/4",role:"受"}]},
+  {name:"稻叶友",works:[{title:"唱出恋爱的苦恼",date:"2022/5/27",role:"受"},{title:"恋恋洗衣店",date:"2022/6/29",role:"受"}]},
+  {name:"八神庆仁郎",works:[{title:"那个阴沉的家伙竟成了我的继兄",date:"2024/12/3",role:"受"},{title:"明明我很受欢迎，却只对那家伙心动，还被他宠上了天",date:"2025/12/19",role:"受"}]}
+];
+
+// 计算每个演员的综合属性
+function getOverallRole(actor) {
+  const roles = actor.works.map(w => w.role);
+  const hasAttack = roles.includes('攻');
+  const hasReceive = roles.includes('受');
+  if (hasAttack && hasReceive) return '两栖';
+  if (hasAttack) return '攻';
+  if (hasReceive) return '受';
+  return '未知';
+}
+
+const ROLE_COLOR = {
+  '攻': '#E8455A',
+  '受': '#3B82C4',
+  '两栖': '#8B5CF6',
+  '未知': '#9CA3AF'
+};
+
+const ROLE_FILL = {
+  '攻': '#fde8eb',
+  '受': '#e8f0fb',
+  '两栖': '#f0ebff',
+  '未知': '#f3f4f6'
+};
+
+// 构建共演关系
+function buildGraph() {
+  const nodes = ACTORS.map(a => ({
+    id: a.name,
+    role: getOverallRole(a),
+    works: a.works
+  }));
+
+  const dramas = {};
+  ACTORS.forEach(actor => {
+    actor.works.forEach(w => {
+      if (!dramas[w.title]) dramas[w.title] = [];
+      dramas[w.title].push(actor.name);
+    });
+  });
+
+  const links = [];
+  const linkSet = new Set();
+  Object.entries(dramas).forEach(([title, actors]) => {
+    for (let i = 0; i < actors.length; i++) {
+      for (let j = i + 1; j < actors.length; j++) {
+        const key = [actors[i], actors[j]].sort().join('|');
+        if (!linkSet.has(key)) {
+          linkSet.add(key);
+          links.push({ source: actors[i], target: actors[j], title });
+        }
+      }
+    }
+  });
+
+  return { nodes, links };
+}
+
+// 建立共演查找
+function buildCostarMap() {
+  const map = {};
+  ACTORS.forEach(a => { map[a.name] = new Set(); });
+  const dramas = {};
+  ACTORS.forEach(actor => {
+    actor.works.forEach(w => {
+      if (!dramas[w.title]) dramas[w.title] = [];
+      dramas[w.title].push(actor.name);
+    });
+  });
+  Object.values(dramas).forEach(actors => {
+    for (let i = 0; i < actors.length; i++) {
+      for (let j = i + 1; j < actors.length; j++) {
+        map[actors[i]].add(actors[j]);
+        map[actors[j]].add(actors[i]);
+      }
+    }
+  });
+  return map;
+}
+
+const { nodes, links } = buildGraph();
+const costarMap = buildCostarMap();
+
+// 渲染侧边栏
+function renderSidebar(filter = '') {
+  const list = document.getElementById('actor-list');
+  const filtered = ACTORS.filter(a => a.name.includes(filter));
+  list.innerHTML = filtered.map(a => {
+    const role = getOverallRole(a);
+    return `
+      <div class="actor-item" data-name="${a.name}" onclick="selectActor('${a.name}')">
+        <div class="actor-dot" style="background:${ROLE_COLOR[role]}"></div>
+        <span class="actor-name">${a.name}</span>
+        <span class="actor-tag tag-${role}">${role}</span>
+      </div>
+    `;
+  }).join('');
+}
+
+renderSidebar();
+
+document.getElementById('search-input').addEventListener('input', e => {
+  renderSidebar(e.target.value);
+});
+
+// D3 图
+const svg = d3.select('#graph-svg');
+const width = document.querySelector('.graph-area').offsetWidth;
+const height = document.querySelector('.graph-area').offsetHeight;
+
+const g = svg.append('g');
+
+// zoom
+svg.call(d3.zoom().scaleExtent([0.3, 3]).on('zoom', e => {
+  g.attr('transform', e.transform);
+}));
+
+// 力导向
+const simulation = d3.forceSimulation(nodes)
+  .force('link', d3.forceLink(links).id(d => d.id).distance(120))
+  .force('charge', d3.forceManyBody().strength(-300))
+  .force('center', d3.forceCenter(width / 2, height / 2))
+  .force('collision', d3.forceCollide(40));
+
+// 连线
+const link = g.append('g')
+  .selectAll('line')
+  .data(links)
+  .join('line')
+  .attr('class', 'link');
+
+// 连线标签
+const linkLabel = g.append('g')
+  .selectAll('text')
+  .data(links)
+  .join('text')
+  .attr('class', 'link-label')
+  .text(d => d.title.length > 10 ? d.title.slice(0, 10) + '…' : d.title)
+  .attr('text-anchor', 'middle');
+
+// 节点
+const node = g.append('g')
+  .selectAll('g')
+  .data(nodes)
+  .join('g')
+  .attr('class', 'node')
+  .call(d3.drag()
+    .on('start', (e, d) => { if (!e.active) simulation.alphaTarget(0.3).restart(); d.fx = d.x; d.fy = d.y; })
+    .on('drag', (e, d) => { d.fx = e.x; d.fy = e.y; })
+    .on('end', (e, d) => { if (!e.active) simulation.alphaTarget(0); d.fx = null; d.fy = null; })
+  )
+  .on('click', (e, d) => { e.stopPropagation(); selectActor(d.id); });
+
+node.append('circle')
+  .attr('r', 18)
+  .attr('fill', d => ROLE_FILL[d.role])
+  .attr('stroke', d => ROLE_COLOR[d.role]);
+
+node.append('text')
+  .attr('dy', 35)
+  .attr('text-anchor', 'middle')
+  .text(d => d.id);
+
+simulation.on('tick', () => {
+  link
+    .attr('x1', d => d.source.x)
+    .attr('y1', d => d.source.y)
+    .attr('x2', d => d.target.x)
+    .attr('y2', d => d.target.y);
+
+  linkLabel
+    .attr('x', d => (d.source.x + d.target.x) / 2)
+    .attr('y', d => (d.source.y + d.target.y) / 2);
+
+  node.attr('transform', d => `translate(${d.x},${d.y})`);
+});
+
+svg.on('click', () => {
+  closePanel();
+  clearHighlight();
+});
+
+// 选中演员
+function selectActor(name) {
+  const actor = ACTORS.find(a => a.name === name);
+  if (!actor) return;
+
+  const role = getOverallRole(actor);
+  const costars = [...(costarMap[name] || [])];
+
+  // 信息面板
+  document.getElementById('panel-name').textContent = name;
+  const roleEl = document.getElementById('panel-role');
+  roleEl.textContent = role === '两栖' ? '攻受两栖' : role;
+  roleEl.style.color = ROLE_COLOR[role];
+
+  document.getElementById('panel-works').innerHTML = actor.works.map(w => `
+    <div class="work-item">
+      <div class="work-role-dot" style="background:${ROLE_COLOR[w.role] || '#9CA3AF'}"></div>
+      <div class="work-title">${w.title}</div>
+      <div class="work-date">${w.date}</div>
+    </div>
+  `).join('');
+
+  document.getElementById('panel-costars').innerHTML = costars.length
+    ? costars.map(c => `<span class="costar-chip" onclick="selectActor('${c}')">${c}</span>`).join('')
+    : '<span style="font-size:0.72rem;color:var(--text-muted)">暂无共演记录</span>';
+
+  document.getElementById('info-panel').classList.add('visible');
+
+  // 高亮
+  highlightActor(name);
+
+  // 侧边栏高亮
+  document.querySelectorAll('.actor-item').forEach(el => {
+    el.classList.toggle('active', el.dataset.name === name);
+  });
+}
+
+function highlightActor(name) {
+  const connected = new Set([name]);
+  links.forEach(l => {
+    const s = typeof l.source === 'object' ? l.source.id : l.source;
+    const t = typeof l.target === 'object' ? l.target.id : l.target;
+    if (s === name) connected.add(t);
+    if (t === name) connected.add(s);
+  });
+
+  node.classed('dimmed', d => !connected.has(d.id));
+  link.classed('dimmed', d => {
+    const s = typeof d.source === 'object' ? d.source.id : d.source;
+    const t = typeof d.target === 'object' ? d.target.id : d.target;
+    return s !== name && t !== name;
+  });
+  link.classed('highlighted', d => {
+    const s = typeof d.source === 'object' ? d.source.id : d.source;
+    const t = typeof d.target === 'object' ? d.target.id : d.target;
+    return s === name || t === name;
+  });
+  linkLabel.attr('opacity', d => {
+    const s = typeof d.source === 'object' ? d.source.id : d.source;
+    const t = typeof d.target === 'object' ? d.target.id : d.target;
+    return (s === name || t === name) ? 1 : 0;
+  });
+}
+
+function clearHighlight() {
+  node.classed('dimmed', false);
+  link.classed('dimmed', false).classed('highlighted', false);
+  linkLabel.attr('opacity', 0);
+  document.querySelectorAll('.actor-item').forEach(el => el.classList.remove('active'));
+}
+
+function closePanel() {
+  document.getElementById('info-panel').classList.remove('visible');
+  clearHighlight();
+}
+</script>
+</body>
+</html>
