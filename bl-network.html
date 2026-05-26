@@ -1,11 +1,9 @@
-<!DOCTYPE html>
-<html lang="zh">
-<head>
+<html lang="zh"><head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>日腐人二下 · 演员关系图鉴</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
-<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@300;400;600&family=Noto+Sans+JP:wght@300;400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@300;400;600&amp;family=Noto+Sans+JP:wght@300;400;500&amp;display=swap" rel="stylesheet">
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 :root {
@@ -156,13 +154,20 @@ svg { width: 100%; height: 100%; }
 .save-btn:hover { opacity: 0.85; }
 .save-btn:disabled { opacity: 0.5; pointer-events: none; }
 .form-msg { font-size: 0.65rem; margin-top: 5px; text-align: center; min-height: 14px; }
+/* 年份筛选 */
+.year-filters { display: flex; gap: 4px; flex-wrap: wrap; padding: 6px 0.9rem; border-bottom: 1px solid var(--border); }
+.yfbtn { padding: 2px 8px; border-radius: 12px; font-size: 0.65rem; border: 1px solid var(--border); background: transparent; color: var(--muted); cursor: pointer; font-family: "Noto Sans JP", sans-serif; transition: all 0.15s; }
+.yfbtn:hover { background: var(--bg); }
+.yfbtn.on { background: var(--accent); color: #fff; border-color: var(--accent); }
+.year-loading { display: none; font-size: 0.62rem; color: var(--muted); padding: 4px 0.9rem; }
+.year-loading.show { display: block; }
 </style>
 </head>
 <body>
 
-<div class="loading-screen" id="loading">
+<div class="loading-screen hidden" id="loading">
   <div class="loading-spinner"></div>
-  <div class="loading-text">加载数据中...</div>
+  <div class="loading-text">⚠️ 请通过 GitHub Pages 访问以加载数据</div>
 </div>
 
 <header>
@@ -186,7 +191,7 @@ svg { width: 100%; height: 100%; }
       <button class="mode-btn" id="mode-list" onclick="setMode('list')">📋 列表</button>
       <button class="mode-btn on" id="mode-graph" onclick="setMode('graph')">🕸 图谱</button>
     </div>
-    <button class="publish-btn" id="publish-btn" onclick="publishToGitHub()">↑ 发布到 GitHub</button>
+    <button class="publish-btn loading" id="publish-btn" onclick="publishToGitHub()">发布中...</button>
   </div>
 </header>
 
@@ -200,6 +205,8 @@ svg { width: 100%; height: 100%; }
   </div>
   <div class="sidebar">
     <input id="search" type="text" placeholder="搜索演员..." oninput="renderList(this.value)">
+    <div class="year-filters" id="year-filters"></div>
+    <div class="year-loading" id="year-loading">筛选中...</div>
     <div class="alist" id="alist"></div>
     <div class="add-section">
       <button class="add-toggle" id="add-toggle" onclick="toggleAddForm()">
@@ -208,23 +215,23 @@ svg { width: 100%; height: 100%; }
       <div class="add-form" id="add-form">
         <div class="form-row">
           <div class="form-label">演员名 <span style="color:#E24B4A">*</span></div>
-          <input class="form-input" id="f-name" placeholder="例：田中洸希" />
+          <input class="form-input" id="f-name" placeholder="例：田中洸希">
         </div>
         <div class="form-row">
           <div class="form-label">事务所 <span class="opt">选填</span></div>
-          <input class="form-input" id="f-agency" placeholder="例：ebidan" />
+          <input class="form-input" id="f-agency" placeholder="例：ebidan">
         </div>
         <div class="form-row">
           <div class="form-label">子团体 <span class="opt">选填</span></div>
-          <input class="form-input" id="f-sub" placeholder="例：superdragon" />
+          <input class="form-input" id="f-sub" placeholder="例：superdragon">
         </div>
         <div class="form-row">
           <div class="form-label">作品名 <span style="color:#E24B4A">*</span></div>
-          <input class="form-input" id="f-title" placeholder="例：甜蜜喂食生活" />
+          <input class="form-input" id="f-title" placeholder="例：甜蜜喂食生活">
         </div>
         <div class="form-row">
           <div class="form-label">上映日期 <span class="opt">选填</span></div>
-          <input class="form-input" id="f-date" placeholder="例：2024/8/4" />
+          <input class="form-input" id="f-date" placeholder="例：2024/8/4">
         </div>
         <div class="form-row">
           <div class="form-label">角色 <span style="color:#E24B4A">*</span></div>
@@ -240,7 +247,7 @@ svg { width: 100%; height: 100%; }
     </div>
   </div>
   <div class="graph">
-    <svg id="svg"></svg>
+    <svg id="svg"><g><g></g><g></g><g></g></g></svg>
     <div class="hint">滚轮缩放 · 拖拽节点 · 点击查看详情</div>
   </div>
   <div class="detail" id="detail">
@@ -329,15 +336,16 @@ async function loadData() {
 
 function buildMaps() {
   costarMap = {}; agencyMap = {}; allDramas = {};
-  ACTORS.forEach(a => { costarMap[a.name] = new Set(); });
-  ACTORS.forEach(a => a.works.forEach(w => {
+  const filtered = getFilteredActors();
+  filtered.forEach(a => { costarMap[a.name] = new Set(); });
+  filtered.forEach(a => a.works.filter(w => curYear==='全部' || (w.date&&w.date.toString().startsWith(curYear))).forEach(w => {
     if(!allDramas[w.title]) allDramas[w.title] = [];
     allDramas[w.title].push(a.name);
   }));
   Object.values(allDramas).forEach(actors => {
-    actors.forEach((a,i) => actors.forEach((b,j) => { if(i!==j) costarMap[a].add(b); }));
+    actors.forEach((a,i) => actors.forEach((b,j) => { if(i!==j) costarMap[a] && costarMap[b] && (costarMap[a].add(b)); }));
   });
-  ACTORS.forEach(a => {
+  filtered.forEach(a => {
     if(a.agency) {
       if(!agencyMap[a.agency]) agencyMap[a.agency] = [];
       agencyMap[a.agency].push(a.name);
@@ -405,7 +413,7 @@ function drawBubbles(nodes) {
 }
 
 function init() {
-  const actors=ACTORS.filter(a=>curFilter==='全部'||getRole(a)===curFilter);
+  const actors=getFilteredActors().filter(a=>curFilter==='全部'||getRole(a)===curFilter);
   const links=buildLinks(curFilter);
   const nodes=actors.map(a=>({ id:a.name,role:getRole(a),agency:a.agency||'',sub:a.sub||'',works:a.works, x:W()/2+(Math.random()-.5)*300, y:H()/2+(Math.random()-.5)*300 }));
   if(simulation) simulation.stop();
@@ -487,6 +495,52 @@ function renderList(q='') {
 
 window.addEventListener('resize',()=>{ if(simulation) simulation.restart(); });
 
+// ========== 年份筛选（Mock Sharding）==========
+let curYear = '全部';
+
+function getYears() {
+  // 从所有作品日期中提取年份
+  const years = new Set();
+  ACTORS.forEach(a => a.works.forEach(w => {
+    const y = w.date ? w.date.toString().slice(0,4) : null;
+    if(y && /^20\d\d$/.test(y)) years.add(y);
+  }));
+  return ['全部', ...Array.from(years).sort().reverse()];
+}
+
+function renderYearFilters() {
+  const container = document.getElementById('year-filters');
+  const years = getYears();
+  container.innerHTML = years.map(y =>
+    `<button class="yfbtn ${y===curYear?'on':''}" onclick="setYearFilter('${y}',this)">${y}</button>`
+  ).join('');
+}
+
+async function setYearFilter(year, btn) {
+  curYear = year;
+  // loading 动画
+  const loadingEl = document.getElementById('year-loading');
+  loadingEl.classList.add('show');
+  // 更新按钮状态
+  document.querySelectorAll('.yfbtn').forEach(b => b.classList.remove('on'));
+  btn.classList.add('on');
+  // 模拟异步（真实场景这里会 fetch 对应年份文件）
+  await new Promise(r => setTimeout(r, 80));
+  loadingEl.classList.remove('show');
+  // 重建图谱
+  buildMaps();
+  init();
+  if(curMode === 'list') renderDashboard();
+}
+
+// 年份过滤后的演员列表（Mock Sharding核心逻辑）
+function getFilteredActors() {
+  if(curYear === '全部') return ACTORS;
+  return ACTORS.filter(a =>
+    a.works.some(w => w.date && w.date.toString().startsWith(curYear))
+  );
+}
+
 // ========== 模式切换 ==========
 let curMode = 'graph';
 
@@ -516,10 +570,11 @@ function setMode(mode) {
 // ========== Dashboard ==========
 function renderDashboard() {
   const dash = document.getElementById('dashboard');
-  if(!ACTORS.length) return;
+  const filteredActors = getFilteredActors();
+  if(!filteredActors.length) return;
 
   // 统计数据
-  const totalActors = ACTORS.length;
+  const totalActors = filteredActors.length;
   const totalDramas = Object.keys(allDramas).length;
   const agencies = Object.keys(agencyMap).length;
   const totalCostar = Object.values(costarMap).reduce((s,v)=>s+v.size, 0) / 2;
@@ -528,7 +583,7 @@ function renderDashboard() {
   const salesTop = Object.entries(SALES).sort((a,b)=>b[1]-a[1]).slice(0,5);
 
   // 共演最多的演员
-  const costarTop = ACTORS.map(a=>({ name:a.name, count:[...(costarMap[a.name]||[])].length }))
+  const costarTop = filteredActors.map(a=>({ name:a.name, count:[...(costarMap[a.name]||[])].length }))
     .sort((a,b)=>b.count-a.count).slice(0,5);
 
   // 事务所分布
@@ -732,9 +787,10 @@ async function saveActor() {
 // 启动：先加载数据再渲染
 (async () => {
   const ok = await loadData();
-  if(ok) { buildMaps(); init(); }
+  if(ok) { buildMaps(); renderYearFilters(); init(); }
   document.getElementById('loading').classList.add('hidden');
 })();
 </script>
-</body>
-</html>
+
+
+</body></html>
