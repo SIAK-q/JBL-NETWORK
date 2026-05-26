@@ -484,6 +484,27 @@ function selectActor(name) {
   setTimeout(()=>{ if(simulation) simulation.restart(); }, 260);
   hlActor(name);
   document.querySelectorAll('.aitem').forEach(el=>el.classList.toggle('on',el.dataset.name===name));
+  // D3 飞跃到目标节点
+  flyToActor(name);
+}
+
+function flyToActor(name) {
+  if(!nodeSel) return;
+  // 找到目标节点的坐标
+  let target = null;
+  nodeSel.each(d => { if(d.id === name) target = d; });
+  if(!target || target.x == null) return;
+  const svgEl = document.getElementById('svg');
+  const w = svgEl.clientWidth, h = svgEl.clientHeight;
+  const scale = 1.4; // 飞过去后的缩放级别
+  const tx = w/2 - target.x * scale;
+  const ty = h/2 - target.y * scale;
+  // 用 D3 zoom transition 平滑飞过去
+  d3.select(svgEl).transition().duration(600).ease(d3.easeCubicInOut)
+    .call(
+      d3.zoom().scaleExtent([0.15,4]).on('zoom', e => g.attr('transform', e.transform)).transform,
+      d3.zoomIdentity.translate(tx, ty).scale(scale)
+    );
 }
 
 function hlActor(name) {
@@ -686,7 +707,7 @@ function listSelectActor(name) {
     <div class="ld-sec">共演过 (${costars.length}人)</div>
     <div class="ld-chips">
       ${costars.length
-        ? costars.map(c=>`<span class="ld-chip" onclick="listSelectActor('${c}')">${c}</span>`).join('')
+        ? costars.map(c=>`<span class="ld-chip" onclick="listSelectActor('${c}');if(curMode==='graph')flyToActor('${c}')">${c}</span>`).join('')
         : '<span style="font-size:0.75rem;color:var(--muted)">暂无共演记录</span>'}
     </div>
     ${actor.agency && (agencyMap[actor.agency]||[]).filter(n=>n!==name).length ? `
